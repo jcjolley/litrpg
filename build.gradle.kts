@@ -16,31 +16,36 @@ val quarkusPlatformArtifactId: String by project
 val quarkusPlatformVersion: String by project
 
 dependencies {
+    implementation("io.quarkus:quarkus-container-image-jib")
     implementation(enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}"))
     implementation(enforcedPlatform("${quarkusPlatformGroupId}:quarkus-amazon-services-bom:${quarkusPlatformVersion}"))
     implementation("io.quarkiverse.amazonservices:quarkus-amazon-dynamodb-enhanced")
-    implementation("io.quarkus:quarkus-rest")
+    implementation("io.quarkus:quarkus-rest-client-jackson")
     implementation("io.quarkus:quarkus-smallrye-openapi")
     implementation("io.quarkus:quarkus-rest-jackson")
-    implementation("io.quarkus:quarkus-rest-client-jackson")
-    implementation("io.quarkiverse.quinoa:quarkus-quinoa:2.4.7")
     implementation("io.quarkus:quarkus-smallrye-fault-tolerance")
     implementation("io.quarkus:quarkus-kotlin")
-    implementation("io.quarkus:quarkus-websockets")
     implementation("io.quarkus:quarkus-smallrye-health")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    implementation("io.quarkiverse.amazonservices:quarkus-amazon-s3")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("io.quarkus:quarkus-arc")
+    implementation("io.quarkus:quarkus-rest")
+    implementation("it.skrape:skrapeit:1.3.0-alpha.2")
+
+    // AWS Lambda deployment
+    implementation("io.quarkus:quarkus-amazon-lambda")
+    implementation("io.quarkus:quarkus-amazon-lambda-http")
+
     testImplementation("io.quarkus:quarkus-junit5")
     testImplementation("io.rest-assured:rest-assured")
-    implementation("it.skrape:skrapeit:1.3.0-alpha.2")
 }
 
 group = "org.jcjolley"
 version = "1.0.0-SNAPSHOT"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_19
+    targetCompatibility = JavaVersion.VERSION_19
 }
 
 tasks.withType<Test> {
@@ -53,17 +58,10 @@ allOpen {
     annotation("io.quarkus.test.junit.QuarkusTest")
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+kotlin {
     compilerOptions {
         apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
-        javaParameters = true
-        jvmTarget.set(JvmTarget.JVM_21)
-        progressiveMode = true
-    }
-}
-
-tasks.quarkusDev {
-    doFirst {
-        System.setProperty("jdk.console", "java.base")
+        jvmTarget.set(JvmTarget.JVM_19)
+        javaParameters.set(true)
     }
 }
