@@ -133,9 +133,10 @@ export function CarouselTrack({
             className={styles.cardWrapper}
             style={{
               transform: `translate(${x}px, ${y}px) scale(${scale})`,
-              opacity: opacity,
+              // Dim non-selected cards when stopped with a selection
+              opacity: !spinning && selectedIndex !== null && !isAtCenter ? opacity * 0.3 : opacity,
               zIndex: isAtCenter ? 200 : isSelected ? 100 : Math.round(50 - distFromSelection),
-              transition: isAtCenter ? 'transform 0.3s ease-out' : undefined,
+              transition: isAtCenter ? 'transform 0.3s ease-out, opacity 0.4s ease-out' : 'opacity 0.4s ease-out',
               cursor: canClick ? 'pointer' : undefined,
             }}
             onClick={handleCardClick}
