@@ -1,0 +1,36 @@
+:root {
+  /* Final Fantasy Blue Theme */
+  --ff-blue-dark: #0a0a2e;
+  --ff-blue-mid: #1a1a5c;
+  --ff-blue-light: #2a2a8a;
+
+  /* Border colors */
+  --ff-border-outer: #ffffff;
+  --ff-border-inner: #4a4a9a;
+
+  /* Text colors */
+  --ff-text-primary: #ffffff;
+  --ff-text-secondary: #a0a0d0;
+  --ff-text-highlight: #ffff00;
+  --ff-text-muted: #6060a0;
+
+  /* Action colors */
+  --ff-action-confirm: #00ff00;
+  --ff-action-cancel: #ff4444;
+  --ff-action-neutral: #ffffff;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Card dimensions */
+  --card-width: 200px;
+  --card-height: 300px;
+  --card-gap: 16px;
+
+  /* Animation */
+  --spin-duration: 3000ms;
+}
