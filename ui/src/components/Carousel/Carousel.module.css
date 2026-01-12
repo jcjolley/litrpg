@@ -28,7 +28,7 @@
   transition: opacity 0.15s ease;
 }
 
-/* Card - always uses the large layout, scaled via transform */
+/* Card - FF3 style with double border effect */
 .cardLarge {
   width: 700px;
   max-width: 95vw;
@@ -37,11 +37,13 @@
     var(--ff-blue-mid) 0%,
     var(--ff-blue-dark) 100%
   );
+  /* FF3 double border: outer light, inner dark shadow */
   border: 4px solid var(--ff-border-outer);
   box-shadow:
-    inset 0 0 0 2px var(--ff-border-inner),
-    0 10px 40px rgba(0, 0, 0, 0.6);
-  border-radius: 8px;
+    inset 0 0 0 4px var(--ff-border-inner),
+    inset 0 0 0 6px var(--ff-border-shadow),
+    0 8px 32px rgba(0, 0, 0, 0.8);
+  border-radius: 12px;
   overflow: hidden;
   /* Center the card on its position */
   margin-left: -350px;
@@ -50,9 +52,10 @@
 
 .cardLargeSelected {
   box-shadow:
-    inset 0 0 0 2px var(--ff-border-inner),
-    0 0 30px rgba(255, 255, 0, 0.3),
-    0 10px 40px rgba(0, 0, 0, 0.6);
+    inset 0 0 0 4px var(--ff-border-inner),
+    inset 0 0 0 6px var(--ff-border-shadow),
+    0 0 20px rgba(248, 232, 0, 0.4),
+    0 8px 32px rgba(0, 0, 0, 0.8);
 }
 
 .cardLargeBody {
@@ -65,11 +68,12 @@
   flex-shrink: 0;
   width: 200px;
   height: 300px;
-  border: 3px solid var(--ff-border-inner);
-  border-radius: 6px;
+  border: 3px solid var(--ff-border-outer);
+  box-shadow: inset 0 0 0 2px var(--ff-border-inner);
+  border-radius: 8px;
   overflow: hidden;
   position: relative;
-  background: none;
+  background: var(--ff-blue-dark);
   padding: 0;
 }
 
@@ -177,8 +181,9 @@ button.cardLargeCover:hover .cardLargeCoverHint {
 .actionButton {
   flex: 1;
   padding: var(--spacing-md) var(--spacing-lg);
-  border: 2px solid var(--ff-border-inner);
-  border-radius: 6px;
+  border: 3px solid var(--ff-border-outer);
+  box-shadow: inset 0 0 0 2px var(--ff-border-inner);
+  border-radius: 8px;
   font-size: 14px;
   font-weight: bold;
   cursor: pointer;
@@ -188,35 +193,35 @@ button.cardLargeCover:hover .cardLargeCoverHint {
 }
 
 .actionButton:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: default;
 }
 
 .actionPrimary {
-  background: linear-gradient(180deg, #4a7c4e 0%, #2d5a30 100%);
+  background: linear-gradient(180deg, #208040 0%, #104020 100%);
   color: var(--ff-text-primary);
 }
 
 .actionPrimary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #5a8c5e 0%, #3d6a40 100%);
+  background: linear-gradient(180deg, #30a050 0%, #206030 100%);
 }
 
 .actionSecondary {
-  background: linear-gradient(180deg, var(--ff-blue-mid) 0%, var(--ff-blue-dark) 100%);
+  background: linear-gradient(180deg, var(--ff-blue-light) 0%, var(--ff-blue-mid) 100%);
   color: var(--ff-text-primary);
 }
 
 .actionSecondary:hover {
-  background: linear-gradient(180deg, #3a5a8c 0%, #2a4a6c 100%);
+  background: linear-gradient(180deg, #2040b0 0%, #102860 100%);
 }
 
 .actionDanger {
-  background: linear-gradient(180deg, #7c4a4a 0%, #5a2d2d 100%);
+  background: linear-gradient(180deg, #802020 0%, #401010 100%);
   color: var(--ff-text-primary);
 }
 
 .actionDanger:hover {
-  background: linear-gradient(180deg, #8c5a5a 0%, #6a3d3d 100%);
+  background: linear-gradient(180deg, #a03030 0%, #602020 100%);
 }
 
 .empty {
@@ -228,7 +233,7 @@ button.cardLargeCover:hover .cardLargeCoverHint {
   font-size: 12px;
 }
 
-/* Floating action bar - appears below the centered card */
+/* Floating action bar - FF3 style prompt */
 .actionBar {
   position: fixed;
   bottom: 8%;
@@ -242,11 +247,13 @@ button.cardLargeCover:hover .cardLargeCoverHint {
     var(--ff-blue-mid) 0%,
     var(--ff-blue-dark) 100%
   );
+  /* FF3 double border style */
   border: 4px solid var(--ff-border-outer);
   box-shadow:
-    inset 0 0 0 2px var(--ff-border-inner),
-    0 10px 40px rgba(0, 0, 0, 0.6);
-  border-radius: 8px;
+    inset 0 0 0 4px var(--ff-border-inner),
+    inset 0 0 0 6px var(--ff-border-shadow),
+    0 8px 32px rgba(0, 0, 0, 0.8);
+  border-radius: 12px;
   z-index: 300;
   animation: slideUp 0.3s ease-out;
 }

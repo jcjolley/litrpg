@@ -1,23 +1,24 @@
 :root {
-  /* Final Fantasy Blue Theme */
-  --ff-blue-dark: #0a0a2e;
-  --ff-blue-mid: #1a1a5c;
-  --ff-blue-light: #2a2a8a;
+  /* Final Fantasy III Blue Theme */
+  --ff-blue-dark: #000020;
+  --ff-blue-mid: #000848;
+  --ff-blue-light: #1028a0;
 
-  /* Border colors */
-  --ff-border-outer: #ffffff;
-  --ff-border-inner: #4a4a9a;
+  /* Border colors - FF3 style double border */
+  --ff-border-outer: #98b8d8;  /* Light steel blue outer edge */
+  --ff-border-inner: #3850a8;  /* Mid blue inner highlight */
+  --ff-border-shadow: #000030; /* Dark shadow for depth */
 
   /* Text colors */
   --ff-text-primary: #ffffff;
-  --ff-text-secondary: #a0a0d0;
-  --ff-text-highlight: #ffff00;
-  --ff-text-muted: #6060a0;
+  --ff-text-secondary: #b0c0e0;
+  --ff-text-highlight: #f8e800;  /* Classic FF yellow */
+  --ff-text-muted: #6080b0;
 
   /* Action colors */
-  --ff-action-confirm: #00ff00;
-  --ff-action-cancel: #ff4444;
-  --ff-action-neutral: #ffffff;
+  --ff-action-confirm: #40c040;
+  --ff-action-cancel: #c04040;
+  --ff-action-neutral: #4080c0;
 
   /* Spacing */
   --spacing-xs: 4px;
