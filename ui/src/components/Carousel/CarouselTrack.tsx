@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import type { Book } from '../../types/book';
 import { BookCard } from './BookCard';
 import styles from './Carousel.module.css';
@@ -12,21 +12,44 @@ interface CarouselTrackProps {
   onCardClick?: (index: number) => void;
 }
 
-// Wheel configuration as percentages of viewport height
-const WHEEL_RADIUS_VH = 80;
-
 // Selection point - where the "featured" card sits (in degrees)
 const SELECTION_ANGLE = 40;
-
-// Position wheel center so that a card at SELECTION_ANGLE lands at viewport center
-// Using: centerX = -radius * cos(angle), centerY = -radius * sin(angle)
 const SELECTION_RADIANS = (SELECTION_ANGLE * Math.PI) / 180;
-const WHEEL_CENTER_X_VH = -WHEEL_RADIUS_VH * Math.cos(SELECTION_RADIANS);
-const WHEEL_CENTER_Y_VH = -WHEEL_RADIUS_VH * Math.sin(SELECTION_RADIANS);
 
-// Scale range - large card is 700px, we want min ~200px equivalent
+// Scale range
 const MIN_SCALE = 0.28;
 const MAX_SCALE = 1.0;
+
+// Breakpoint for mobile
+const MOBILE_BREAKPOINT = 768;
+
+function useResponsiveWheel() {
+  const [dimensions, setDimensions] = useState(() => {
+    if (typeof window === 'undefined') {
+      return { isMobile: false, vh: 10, vw: 10 };
+    }
+    return {
+      isMobile: window.innerWidth <= MOBILE_BREAKPOINT,
+      vh: window.innerHeight / 100,
+      vw: window.innerWidth / 100,
+    };
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setDimensions({
+        isMobile: window.innerWidth <= MOBILE_BREAKPOINT,
+        vh: window.innerHeight / 100,
+        vw: window.innerWidth / 100,
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return dimensions;
+}
 
 export function CarouselTrack({
   books,
@@ -37,17 +60,15 @@ export function CarouselTrack({
   onCardClick,
 }: CarouselTrackProps) {
   const anglePerItem = 360 / books.length;
+  const { isMobile, vh } = useResponsiveWheel();
 
-  const vh = useMemo(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerHeight / 100;
-    }
-    return 10;
-  }, []);
+  // Wheel radius adapts to screen size - smaller on mobile
+  const wheelRadiusVh = isMobile ? 55 : 80;
+  const wheelRadius = wheelRadiusVh * vh;
 
-  const wheelRadius = WHEEL_RADIUS_VH * vh;
-  const wheelCenterX = WHEEL_CENTER_X_VH * vh;
-  const wheelCenterY = WHEEL_CENTER_Y_VH * vh;
+  // Position wheel center so that a card at SELECTION_ANGLE lands at viewport center
+  const wheelCenterX = -wheelRadiusVh * Math.cos(SELECTION_RADIANS) * vh;
+  const wheelCenterY = -wheelRadiusVh * Math.sin(SELECTION_RADIANS) * vh;
 
   return (
     <div className={styles.track}>
