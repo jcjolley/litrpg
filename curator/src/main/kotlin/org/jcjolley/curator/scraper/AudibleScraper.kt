@@ -8,6 +8,7 @@ import it.skrape.core.htmlDocument
 import it.skrape.selects.CssSelectable
 import it.skrape.selects.DocElement
 import it.skrape.selects.ElementNotFoundException
+import kotlinx.serialization.json.*
 import mu.KotlinLogging
 import org.jcjolley.curator.model.ScrapedBook
 
@@ -19,6 +20,8 @@ class AudibleScraper {
             requestTimeout = 30_000
         }
     }
+
+    private val json = Json { ignoreUnknownKeys = true }
 
     /**
      * Scrape a single book's product page from Audible
@@ -42,79 +45,76 @@ class AudibleScraper {
     }
 
     /**
-     * Parse the HTML of an Audible product page
+     * Parse the HTML of an Audible product page.
+     * Audible now uses JSON data embedded in the page for metadata.
      */
     fun parseProductPage(html: String, sourceUrl: String): ScrapedBook {
-        return htmlDocument(html) {
-            // Extract ASIN from URL
-            val asin = extractAsin(sourceUrl)
+        val asin = extractAsin(sourceUrl)
 
-            // Title - usually in h1 with specific class
+        // Extract metadata JSON from the page (contains authors, narrators, rating)
+        val metadataJson = extractMetadataJson(html)
+
+        // Extract author from JSON
+        val author = metadataJson?.get("authors")?.jsonArray
+            ?.firstOrNull()?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
+            ?: "Unknown"
+
+        // Extract rating from JSON
+        val rating = metadataJson?.get("rating")?.jsonObject?.get("value")?.jsonPrimitive?.doubleOrNull ?: 0.0
+        val numRatings = metadataJson?.get("rating")?.jsonObject?.get("count")?.jsonPrimitive?.intOrNull ?: 0
+
+        // Extract duration - look for "duration":"X hrs and Y mins" pattern
+        val duration = Regex(""""duration"\s*:\s*"([^"]+)"""").find(html)?.groupValues?.get(1) ?: "Unknown"
+
+        // Extract release date - format: "releaseDate":"MM-DD-YY"
+        val releaseDate = Regex(""""releaseDate"\s*:\s*"([^"]+)"""").find(html)?.groupValues?.get(1) ?: "Unknown"
+
+        // Extract series info from JSON pattern
+        val seriesMatch = Regex(""""series"\s*:\s*\[\s*\{[^}]*"part"\s*:\s*"([^"]*)"[^}]*"name"\s*:\s*"([^"]*)"""").find(html)
+        val seriesPart = seriesMatch?.groupValues?.get(1)
+        val seriesName = seriesMatch?.groupValues?.get(2)
+        val (series, seriesPosition) = if (seriesName != null) {
+            Pair(seriesName, parseBookNumber(seriesPart))
+        } else {
+            Pair(null, null)
+        }
+
+        // Extract description - look for the JSON description field with HTML content
+        val description = Regex(""""description"\s*:\s*"((?:[^"\\]|\\.)*)"""")
+            .findAll(html)
+            .map { it.groupValues[1] }
+            .filter { it.contains("<p>") || it.length > 100 }  // Find the HTML description, not the meta one
+            .firstOrNull()
+            ?.let { unescapeJson(it) }
+            ?.let { stripHtml(it) }
+            ?: ""
+
+        // Extract cover image - look for the product image
+        val imageUrl = Regex("""https://m\.media-amazon\.com/images/I/[^"]+\.jpg""")
+            .findAll(html)
+            .map { it.value }
+            .filter { !it.contains("SocialShare") && !it.contains("placeholder") }
+            .firstOrNull()
+            ?: ""
+
+        return htmlDocument(html) {
+            // Title - usually in h1
             val title = findFirstOrNull("h1.bc-heading") { text }
                 ?: findFirst("h1") { text }
 
             // Subtitle - may not exist
             val subtitle = findFirstOrNull("span.bc-text.bc-size-medium.bc-color-secondary") { text }
 
-            // Author info
-            val authorElement = findFirstOrNull("li.authorLabel a") { this }
-            val author = authorElement?.text ?: findFirstOrNull("li.authorLabel span") { text } ?: "Unknown"
-            val authorUrl = authorElement?.attribute("href")
-
-            // Series info
-            val seriesElement = findFirstOrNull("li.seriesLabel a") { this }
-            val seriesText = seriesElement?.text
-            val (series, seriesPosition) = parseSeriesInfo(seriesText)
-
-            // Runtime/Length
-            val length = findFirstOrNull("li.runtimeLabel span") { text }
-                ?.replace("Length:", "")
-                ?.trim()
-                ?: "Unknown"
-
-            // Release date
-            val releaseDate = findFirstOrNull("li.releaseDateLabel span") { text }
-                ?.replace("Release date:", "")
-                ?.trim()
-                ?: "Unknown"
-
-            // Language
-            val language = findFirstOrNull("li.languageLabel span") { text }
-                ?.replace("Language:", "")
-                ?.trim()
-                ?: "English"
-
-            // Cover image - try multiple selectors
-            val imageUrl = findFirstOrNull("img.bc-pub-block.bc-image-inset-border") { attribute("src") }
-                ?: findFirstOrNull("div.hero-content img") { attribute("src") }
-                ?: findFirstOrNull("img[data-product-image]") { attribute("src") }
-                ?: ""
-
-            // Rating
-            val ratingText = findFirstOrNull("li.ratingsLabel span.bc-pub-offscreen") { text }
-            val rating = parseRating(ratingText)
-
-            // Number of ratings
-            val numRatingsText = findFirstOrNull("li.ratingsLabel span.bc-text") { text }
-                ?: findFirstOrNull("span.bc-color-link") { text }
-            val numRatings = parseNumRatings(numRatingsText)
-
-            // Description - try the publisher summary section
-            val description = findFirstOrNull("div.bc-expander-content span.bc-text") { text }
-                ?: findFirstOrNull("div.bc-box.bc-box-padding-small span") { text }
-                ?: findFirstOrNull("div.productPublisherSummary span") { text }
-                ?: ""
-
             ScrapedBook(
                 title = title.trim(),
                 subtitle = subtitle?.trim(),
                 author = author.trim(),
-                authorUrl = authorUrl?.let { normalizeUrl(it) },
+                authorUrl = null,
                 series = series,
                 seriesPosition = seriesPosition,
-                length = length,
+                length = duration,
                 releaseDate = releaseDate,
-                language = language,
+                language = "English",
                 imageUrl = imageUrl,
                 audibleUrl = sourceUrl,
                 audibleAsin = asin,
@@ -123,6 +123,48 @@ class AudibleScraper {
                 originalDescription = description.trim()
             )
         }
+    }
+
+    /**
+     * Extract the metadata JSON object from adbl-product-metadata element
+     */
+    private fun extractMetadataJson(html: String): JsonObject? {
+        // Pattern: {"rating":{...},"authors":[...],"narrators":[...]}
+        val pattern = Regex("""\{"rating":\{[^}]+\},"authors":\[[^\]]+\],"narrators":\[[^\]]+\]\}""")
+        val match = pattern.find(html) ?: return null
+        return try {
+            json.parseToJsonElement(match.value).jsonObject
+        } catch (e: Exception) {
+            logger.warn { "Failed to parse metadata JSON: ${e.message}" }
+            null
+        }
+    }
+
+    /**
+     * Parse book number from series part text like "Book 4"
+     */
+    private fun parseBookNumber(partText: String?): Int? {
+        if (partText == null) return null
+        return Regex("""(\d+)""").find(partText)?.value?.toIntOrNull()
+    }
+
+    /**
+     * Unescape JSON string (handle \/ and other escapes)
+     */
+    private fun unescapeJson(s: String): String {
+        return s.replace("\\/", "/")
+            .replace("\\n", "\n")
+            .replace("\\\"", "\"")
+            .replace("\\\\", "\\")
+    }
+
+    /**
+     * Strip HTML tags from a string
+     */
+    private fun stripHtml(html: String): String {
+        return html.replace(Regex("<[^>]+>"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
     }
 
     /**

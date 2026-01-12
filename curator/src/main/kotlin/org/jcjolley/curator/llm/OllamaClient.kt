@@ -1,13 +1,12 @@
 package org.jcjolley.curator.llm
 
 import io.ktor.client.*
-import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import mu.KotlinLogging
 
@@ -30,13 +29,12 @@ class OllamaClient(
     private val baseUrl: String = "http://localhost:11434",
     private val model: String = "llama3.2:latest"
 ) {
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
+
     private val client = HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-            })
-        }
         engine {
             requestTimeout = 120_000  // 2 minutes for LLM generation
         }
@@ -45,15 +43,24 @@ class OllamaClient(
     suspend fun generate(prompt: String): String {
         logger.debug { "Sending prompt to Ollama (${prompt.length} chars)" }
 
+        val requestBody = json.encodeToString(OllamaRequest(model = model, prompt = prompt))
+
         val response = client.post("$baseUrl/api/generate") {
             contentType(ContentType.Application.Json)
-            setBody(OllamaRequest(model = model, prompt = prompt))
+            setBody(requestBody)
         }
 
-        val ollamaResponse = response.body<OllamaResponse>()
-        logger.debug { "Received response (${ollamaResponse.response.length} chars)" }
+        // Ollama returns ndjson (newline-delimited JSON) - parse each line and combine responses
+        val responseText = response.bodyAsText()
+        val fullResponse = responseText
+            .lineSequence()
+            .filter { it.isNotBlank() }
+            .map { json.decodeFromString<OllamaResponse>(it) }
+            .map { it.response }
+            .joinToString("")
 
-        return ollamaResponse.response.trim()
+        logger.debug { "Received response (${fullResponse.length} chars)" }
+        return fullResponse.trim()
     }
 
     fun close() {

@@ -17,6 +17,13 @@ variable "dynamodb_table_name" {
   default     = "litrpg-books-dev"
 }
 
+# ECR
+variable "ecr_repository_name" {
+  description = "Name of the ECR repository"
+  type        = string
+  default     = "litrpg-api-dev"
+}
+
 # Lambda
 variable "lambda_function_name" {
   description = "Name of the Lambda function"
@@ -24,16 +31,28 @@ variable "lambda_function_name" {
   default     = "litrpg-api-dev"
 }
 
-variable "lambda_zip_path" {
-  description = "Path to the Lambda deployment package"
+variable "deployment_type" {
+  description = "Lambda deployment type: 'zip' (simpler) or 'container' (more control)"
+  type        = string
+  default     = "zip"
+}
+
+variable "zip_file_path" {
+  description = "Path to function.zip for ZIP deployment"
   type        = string
   default     = "../../../build/function.zip"
 }
 
+variable "container_image_tag" {
+  description = "Container image tag (for container deployment)"
+  type        = string
+  default     = "latest"
+}
+
 variable "lambda_memory_size" {
-  description = "Lambda memory size in MB"
+  description = "Lambda memory size in MB (128 is sufficient for native)"
   type        = number
-  default     = 256
+  default     = 128
 }
 
 variable "lambda_timeout" {

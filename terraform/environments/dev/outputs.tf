@@ -3,6 +3,11 @@ output "api_endpoint" {
   value       = module.api_gateway.api_endpoint
 }
 
+output "ecr_repository_url" {
+  description = "ECR repository URL for container images (only for container deployment)"
+  value       = var.deployment_type == "container" ? module.ecr[0].repository_url : null
+}
+
 output "frontend_url" {
   description = "CloudFront distribution URL"
   value       = module.frontend.cloudfront_url

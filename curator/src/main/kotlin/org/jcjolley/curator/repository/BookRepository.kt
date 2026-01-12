@@ -20,17 +20,30 @@ private val logger = KotlinLogging.logger {}
 
 class BookRepository(
     endpoint: String? = null,  // null for real AWS, "http://localhost:8000" for local/testcontainers
-    region: Region = Region.US_EAST_1
+    tableName: String? = null, // null uses env var or default
+    region: Region = getRegion()
 ) {
     private val dynamoDbClient: DynamoDbClient
     private val enhancedClient: DynamoDbEnhancedClient
     private val booksTable: DynamoDbTable<BookEntity>
+    val tableName: String
 
     companion object {
-        const val TABLE_NAME = "litrpg-books"
+        const val DEFAULT_TABLE_NAME = "litrpg-books-dev"
+
+        fun getTableName(): String {
+            return System.getenv("DYNAMODB_TABLE_NAME") ?: DEFAULT_TABLE_NAME
+        }
+
+        fun getRegion(): Region {
+            val regionStr = System.getenv("AWS_REGION") ?: System.getenv("AWS_DEFAULT_REGION") ?: "us-east-1"
+            return Region.of(regionStr)
+        }
     }
 
     init {
+        this.tableName = tableName ?: getTableName()
+
         val clientBuilder = DynamoDbClient.builder()
             .region(region)
 
@@ -50,7 +63,7 @@ class BookRepository(
             .dynamoDbClient(dynamoDbClient)
             .build()
 
-        booksTable = enhancedClient.table(TABLE_NAME, TableSchema.fromBean(BookEntity::class.java))
+        booksTable = enhancedClient.table(this.tableName, TableSchema.fromBean(BookEntity::class.java))
     }
 
     /**
@@ -58,13 +71,13 @@ class BookRepository(
      */
     fun createTableIfNotExists() {
         try {
-            dynamoDbClient.describeTable { it.tableName(TABLE_NAME) }
-            logger.debug { "Table $TABLE_NAME already exists" }
+            dynamoDbClient.describeTable { it.tableName(tableName) }
+            logger.debug { "Table $tableName already exists" }
         } catch (e: ResourceNotFoundException) {
-            logger.info { "Creating table $TABLE_NAME..." }
+            logger.info { "Creating table $tableName..." }
 
             dynamoDbClient.createTable { builder ->
-                builder.tableName(TABLE_NAME)
+                builder.tableName(tableName)
                     .keySchema(
                         KeySchemaElement.builder()
                             .attributeName("id")
@@ -81,8 +94,8 @@ class BookRepository(
             }
 
             // Wait for table to be active
-            dynamoDbClient.waiter().waitUntilTableExists { it.tableName(TABLE_NAME) }
-            logger.info { "Table $TABLE_NAME created successfully" }
+            dynamoDbClient.waiter().waitUntilTableExists { it.tableName(tableName) }
+            logger.info { "Table $tableName created successfully" }
         }
     }
 

@@ -1,13 +1,14 @@
 # Dev environment configuration
-aws_region   = "us-east-1"
-environment  = "dev"
+aws_region  = "us-west-2"
+environment = "dev"
 
 # DynamoDB
 dynamodb_table_name = "litrpg-books-dev"
 
-# Lambda
+# Lambda - ZIP deployment (simpler, no ECR needed)
 lambda_function_name = "litrpg-api-dev"
-lambda_zip_path      = "../../../build/function.zip"
+deployment_type      = "zip"
+zip_file_path        = "../../../build/function.zip"
 lambda_memory_size   = 256
 lambda_timeout       = 30
 

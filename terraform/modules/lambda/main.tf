@@ -45,24 +45,32 @@ resource "aws_iam_role_policy" "dynamodb_access" {
   })
 }
 
-# Lambda function
+# Lambda function - Supports both ZIP and Container deployment
 resource "aws_lambda_function" "api" {
   function_name = var.function_name
   role          = aws_iam_role.lambda_exec.arn
-  handler       = "io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest"
-  runtime       = "provided.al2023"
   architectures = ["x86_64"]
 
-  filename         = var.lambda_zip_path
-  source_code_hash = fileexists(var.lambda_zip_path) ? filebase64sha256(var.lambda_zip_path) : null
+  # ZIP deployment (simpler, no ECR needed)
+  package_type = var.deployment_type == "zip" ? "Zip" : "Image"
+  filename     = var.deployment_type == "zip" ? var.zip_file_path : null
+  handler      = var.deployment_type == "zip" ? "not.used.in" : null  # Required but not used by native
+  runtime      = var.deployment_type == "zip" ? "provided.al2023" : null
+
+  # Container deployment (for larger images or more control)
+  image_uri = var.deployment_type == "container" ? var.container_image_uri : null
+
+  # Use file hash to trigger updates when ZIP changes
+  source_code_hash = var.deployment_type == "zip" && var.zip_file_path != null ? filebase64sha256(var.zip_file_path) : null
 
   memory_size = var.memory_size
   timeout     = var.timeout
 
   environment {
     variables = {
-      DYNAMODB_TABLE_NAME = var.dynamodb_table_name
-      QUARKUS_PROFILE     = var.environment
+      DYNAMODB_TABLE_NAME     = var.dynamodb_table_name
+      QUARKUS_PROFILE         = var.environment
+      DISABLE_SIGNAL_HANDLERS = "true"
     }
   }
 

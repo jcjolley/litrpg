@@ -21,6 +21,14 @@ provider "aws" {
   }
 }
 
+# ECR repository for Lambda container images (only needed for container deployment)
+module "ecr" {
+  count  = var.deployment_type == "container" ? 1 : 0
+  source = "../../modules/ecr"
+
+  repository_name = var.ecr_repository_name
+}
+
 # DynamoDB table for book metadata
 module "dynamodb" {
   source = "../../modules/dynamodb"
@@ -38,7 +46,7 @@ module "api_gateway" {
   cors_origins      = var.cors_origins
 }
 
-# Lambda function for Quarkus API
+# Lambda function for Quarkus API (native)
 module "lambda" {
   source = "../../modules/lambda"
 
@@ -46,10 +54,14 @@ module "lambda" {
   function_name             = var.lambda_function_name
   dynamodb_table_arn        = module.dynamodb.table_arn
   dynamodb_table_name       = module.dynamodb.table_name
-  lambda_zip_path           = var.lambda_zip_path
   api_gateway_execution_arn = module.api_gateway.execution_arn
   memory_size               = var.lambda_memory_size
   timeout                   = var.lambda_timeout
+
+  # Deployment type: "zip" (simpler) or "container" (more control)
+  deployment_type     = var.deployment_type
+  zip_file_path       = var.deployment_type == "zip" ? var.zip_file_path : null
+  container_image_uri = var.deployment_type == "container" ? "${module.ecr[0].repository_url}:${var.container_image_tag}" : null
 }
 
 # Frontend hosting (S3 + CloudFront)

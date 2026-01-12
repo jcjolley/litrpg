@@ -18,9 +18,27 @@ variable "dynamodb_table_name" {
   type        = string
 }
 
-variable "lambda_zip_path" {
-  description = "Path to Lambda deployment ZIP"
+variable "deployment_type" {
+  description = "Deployment type: 'zip' or 'container'"
   type        = string
+  default     = "zip"
+
+  validation {
+    condition     = contains(["zip", "container"], var.deployment_type)
+    error_message = "deployment_type must be 'zip' or 'container'"
+  }
+}
+
+variable "zip_file_path" {
+  description = "Path to function.zip (for zip deployment)"
+  type        = string
+  default     = null
+}
+
+variable "container_image_uri" {
+  description = "ECR container image URI (for container deployment)"
+  type        = string
+  default     = null
 }
 
 variable "api_gateway_execution_arn" {
@@ -31,7 +49,7 @@ variable "api_gateway_execution_arn" {
 variable "memory_size" {
   description = "Lambda memory size in MB"
   type        = number
-  default     = 256
+  default     = 128
 }
 
 variable "timeout" {

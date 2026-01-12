@@ -16,14 +16,17 @@ import org.jcjolley.curator.scraper.AudibleScraper
 import java.time.Instant
 import java.util.*
 
-class AddCommand : CliktCommand(
-    name = "add",
-    help = "Add a book to the catalog by Audible URL"
-) {
+class AddCommand : CliktCommand(name = "add") {
+    override fun help(context: com.github.ajalt.clikt.core.Context) =
+        "Add a book to the catalog by Audible URL"
+
     private val url by argument(help = "Audible product page URL")
 
-    private val interactive by option("-i", "--interactive", help = "Interactive mode for review/edit")
-        .flag(default = true)
+    private val interactive by option("-i", "--interactive", "--no-interactive", help = "Interactive mode for review/edit")
+        .flag("--no-interactive", default = true)
+
+    private val autoAccept by option("-y", "--yes", help = "Automatically accept the generated description")
+        .flag(default = false)
 
     private val ollamaEndpoint by option("--ollama", help = "Ollama endpoint URL")
         .default("http://localhost:11434")
@@ -59,9 +62,9 @@ class AddCommand : CliktCommand(
             var result = summarizer.summarize(scraped.originalDescription)
             displaySummarizationResult(result)
 
-            // Step 3: Interactive review (if enabled)
+            // Step 3: Interactive review (if enabled and not auto-accept)
             var finalDescription = result.blurb
-            if (interactive) {
+            if (interactive && !autoAccept) {
                 finalDescription = interactiveReview(result, summarizer, scraped.originalDescription)
             }
 
