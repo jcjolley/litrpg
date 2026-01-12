@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { carouselEase } from '../utils/easing';
 
-export type SpinState = 'idle' | 'spinning' | 'stopped';
+export type SpinState = 'idle' | 'spinning' | 'continuous' | 'stopped';
 
 interface UseCarouselSpinOptions {
   itemCount: number;
   spinDuration?: number;
+  continuousSpeed?: number; // degrees per second for continuous spin
   onSpinComplete?: (targetIndex: number) => void;
 }
 
@@ -13,12 +14,15 @@ interface UseCarouselSpinResult {
   angle: number;  // Current rotation angle in degrees
   spinState: SpinState;
   startSpin: (targetIndex: number) => void;
+  startContinuousSpin: () => void;
+  stopAndLand: (targetIndex: number) => void;
   reset: () => void;
 }
 
 export function useCarouselSpin({
   itemCount,
   spinDuration = 4000,
+  continuousSpeed = 30, // 30 degrees per second = 1 full rotation every 12 seconds
   onSpinComplete,
 }: UseCarouselSpinOptions): UseCarouselSpinResult {
   const [angle, setAngle] = useState(0);
@@ -29,6 +33,13 @@ export function useCarouselSpin({
   const startAngleRef = useRef<number>(0);
   const targetAngleRef = useRef<number>(0);
   const targetIndexRef = useRef<number>(0);
+  const lastFrameTimeRef = useRef<number>(0);
+  const currentAngleRef = useRef<number>(0);
+
+  // Keep currentAngleRef in sync with angle state
+  useEffect(() => {
+    currentAngleRef.current = angle;
+  }, [angle]);
 
   // Angle per item (evenly distributed around the wheel)
   const anglePerItem = 360 / itemCount;
@@ -42,6 +53,83 @@ export function useCarouselSpin({
       return selectionAngle - index * anglePerItem;
     },
     [anglePerItem]
+  );
+
+  // Start continuous spinning (no target, just keeps going)
+  const startContinuousSpin = useCallback(() => {
+    if (spinState === 'continuous') return;
+
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+
+    lastFrameTimeRef.current = performance.now();
+    setSpinState('continuous');
+
+    const animateContinuous = (currentTime: number) => {
+      const deltaTime = (currentTime - lastFrameTimeRef.current) / 1000; // seconds
+      lastFrameTimeRef.current = currentTime;
+
+      const deltaAngle = continuousSpeed * deltaTime;
+      const newAngle = currentAngleRef.current + deltaAngle;
+
+      setAngle(newAngle);
+      currentAngleRef.current = newAngle;
+
+      animationRef.current = requestAnimationFrame(animateContinuous);
+    };
+
+    animationRef.current = requestAnimationFrame(animateContinuous);
+  }, [spinState, continuousSpeed]);
+
+  // Stop continuous spin and land on a target
+  const stopAndLand = useCallback(
+    (targetIndex: number) => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+
+      // Calculate target position for this index
+      const baseTargetAngle = getAngleForIndex(targetIndex);
+      const currentAngle = currentAngleRef.current;
+
+      // Ensure we spin forward by at least 270-320 degrees before landing
+      const minRotation = 270 + Math.random() * 50;
+
+      let targetAngle = baseTargetAngle;
+      while (targetAngle < currentAngle + minRotation) {
+        targetAngle += 360;
+      }
+
+      startAngleRef.current = currentAngle;
+      targetAngleRef.current = targetAngle;
+      targetIndexRef.current = targetIndex;
+      startTimeRef.current = performance.now();
+
+      setSpinState('spinning');
+
+      const animate = (currentTime: number) => {
+        const elapsed = currentTime - startTimeRef.current;
+        const progress = Math.min(elapsed / spinDuration, 1);
+        const easedProgress = carouselEase(progress);
+
+        const totalRotation = targetAngleRef.current - startAngleRef.current;
+        const newAngle = startAngleRef.current + totalRotation * easedProgress;
+
+        setAngle(newAngle);
+        currentAngleRef.current = newAngle;
+
+        if (progress < 1) {
+          animationRef.current = requestAnimationFrame(animate);
+        } else {
+          setSpinState('stopped');
+          onSpinComplete?.(targetIndexRef.current);
+        }
+      };
+
+      animationRef.current = requestAnimationFrame(animate);
+    },
+    [getAngleForIndex, spinDuration, onSpinComplete]
   );
 
   const startSpin = useCallback(
@@ -99,6 +187,7 @@ export function useCarouselSpin({
       cancelAnimationFrame(animationRef.current);
     }
     setAngle(0);
+    currentAngleRef.current = 0;
     setSpinState('idle');
   }, []);
 
@@ -110,5 +199,5 @@ export function useCarouselSpin({
     };
   }, []);
 
-  return { angle, spinState, startSpin, reset };
+  return { angle, spinState, startSpin, startContinuousSpin, stopAndLand, reset };
 }

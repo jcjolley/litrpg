@@ -16,6 +16,7 @@ interface CarouselProps {
   onIgnore?: () => void;
   onCoverClick?: () => void;
   selectedBookId?: string | null;
+  continuousSpin?: boolean; // When true, spin indefinitely until released
 }
 
 export function Carousel({
@@ -29,6 +30,7 @@ export function Carousel({
   onIgnore,
   onCoverClick,
   selectedBookId,
+  continuousSpin = false,
 }: CarouselProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const { selectBook, getTargetIndex } = useWeightedSelection();
@@ -44,7 +46,7 @@ export function Carousel({
     [books, onBookSelected]
   );
 
-  const { angle, spinState, startSpin, reset } = useCarouselSpin({
+  const { angle, spinState, startSpin, startContinuousSpin, stopAndLand, reset } = useCarouselSpin({
     itemCount: books.length,
     spinDuration: 4000,
     onSpinComplete: handleSpinComplete,
@@ -62,20 +64,47 @@ export function Carousel({
     startSpin(targetIndex);
   }, [books, userWishlist, spinState, selectBook, getTargetIndex, startSpin, onSpinStart]);
 
+  // Land on a random weighted book (used when exiting continuous spin)
+  const doLand = useCallback(() => {
+    if (books.length === 0) return;
+
+    const targetBook = selectBook(books, userWishlist);
+    if (!targetBook) return;
+
+    const targetIndex = getTargetIndex(books, targetBook);
+    setSelectedIndex(null);
+    onSpinStart?.();
+    stopAndLand(targetIndex);
+  }, [books, userWishlist, selectBook, getTargetIndex, stopAndLand, onSpinStart]);
+
   // Handle clicking on a non-selected card to focus it
   const handleCardClick = useCallback((index: number) => {
-    if (spinState === 'spinning') return;
+    if (spinState === 'spinning' || spinState === 'continuous') return;
     setSelectedIndex(null);
     startSpin(index);
   }, [spinState, startSpin]);
 
-  // Auto-spin on mount
+  // Start continuous spin on mount if continuousSpin is true
   useEffect(() => {
-    if (books.length > 0 && spinState === 'idle') {
+    if (books.length > 0 && continuousSpin && spinState === 'idle') {
+      startContinuousSpin();
+    }
+  }, [books.length, continuousSpin, spinState, startContinuousSpin]);
+
+  // Handle transition from continuous spin to landing
+  useEffect(() => {
+    if (!continuousSpin && spinState === 'continuous') {
+      doLand();
+    }
+  }, [continuousSpin, spinState, doLand]);
+
+  // Auto-spin on mount (only if not in continuous mode)
+  useEffect(() => {
+    if (books.length > 0 && spinState === 'idle' && !continuousSpin) {
       const timer = setTimeout(doSpin, 500);
       return () => clearTimeout(timer);
     }
-  }, [books.length]);
+  }, [books.length, continuousSpin]);
 
   // Handle external spin trigger
   useEffect(() => {
@@ -104,7 +133,7 @@ export function Carousel({
           books={books}
           angle={angle}
           selectedIndex={selectedIndex}
-          spinning={spinState === 'spinning'}
+          spinning={spinState === 'spinning' || spinState === 'continuous'}
           onCoverClick={onCoverClick}
           onCardClick={handleCardClick}
         />
