@@ -146,7 +146,7 @@ export function CarouselTrack({
               book={book}
               isSelected={isSelected}
               isInteractive={isAtCenter}
-              onCoverClick={isAtCenter ? onCoverClick : undefined}
+              onCardClick={isAtCenter ? onCoverClick : undefined}
             />
           </div>
         );
