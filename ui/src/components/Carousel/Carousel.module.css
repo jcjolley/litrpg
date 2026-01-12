@@ -59,12 +59,18 @@
 }
 
 /* Clickable card - entire card is a button */
-.cardLargeClickable {
+button.cardLargeClickable {
+  /* Reset all button defaults */
+  display: block;
+  padding: 0;
+  margin: 0;
+  margin-left: -350px;
+  margin-top: -250px;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  /* Reset button styles */
-  font-family: inherit;
-  text-align: left;
 }
 
 .cardLargeClickable:hover {
@@ -308,6 +314,11 @@
 
   .cardLargeHint {
     font-size: 10px;
+  }
+
+  button.cardLargeClickable {
+    margin-left: -160px;
+    margin-top: -220px;
   }
 
   .actionBar {
