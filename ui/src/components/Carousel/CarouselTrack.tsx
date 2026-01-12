@@ -27,6 +27,10 @@ const SELECTION_RADIANS = (SELECTION_ANGLE * Math.PI) / 180;
 const WHEEL_CENTER_X_VH = -WHEEL_RADIUS_VH * Math.cos(SELECTION_RADIANS);
 const WHEEL_CENTER_Y_VH = -WHEEL_RADIUS_VH * Math.sin(SELECTION_RADIANS);
 
+// Scale range - large card is 700px, we want min ~200px equivalent
+const MIN_SCALE = 0.28;
+const MAX_SCALE = 1.0;
+
 export function CarouselTrack({
   books,
   angle,
@@ -85,45 +89,39 @@ export function CarouselTrack({
         }
         opacity = Math.max(0, Math.min(1, opacity));
 
-        // Scale - grow large at selection point
-        // Handle wrap-around for distance calculation
+        // Scale based on distance from selection point
         let distFromSelection = Math.abs(effectiveAngle - SELECTION_ANGLE);
         if (distFromSelection > 180) distFromSelection = 360 - distFromSelection;
 
         const isSelected = selectedIndex !== null && index === selectedIndex;
+        const isAtCenter = !spinning && isSelected;
 
-        // When stopped and selected, show large card; otherwise scale based on position
-        const showLarge = !spinning && isSelected;
-
-        let scale: number;
-        if (showLarge) {
-          scale = 1; // Large card has its own size
-        } else {
-          // Bigger base scale, larger max scale for more visible cards
-          const MIN_SCALE = 0.5;
-          const MAX_SCALE = 1.5;
-          const scaleProgress = Math.max(0, 1 - distFromSelection / 50);
-          scale = MIN_SCALE + (MAX_SCALE - MIN_SCALE) * Math.pow(scaleProgress, 1.2);
-        }
+        // Smooth scale transition based on distance from selection
+        // Cards grow as they approach the selection point
+        const scaleProgress = Math.max(0, 1 - distFromSelection / 60);
+        const scale = isAtCenter
+          ? MAX_SCALE
+          : MIN_SCALE + (MAX_SCALE - MIN_SCALE) * Math.pow(scaleProgress, 2);
 
         return (
           <div
             key={book.id}
-            className={`${styles.cardWrapper} ${showLarge ? styles.cardWrapperLarge : ''}`}
-            style={showLarge ? undefined : {
+            className={styles.cardWrapper}
+            style={{
               transform: `translate(${x}px, ${y}px) scale(${scale})`,
               opacity: opacity,
-              zIndex: isSelected ? 100 : Math.round(50 - distFromSelection),
+              zIndex: isAtCenter ? 200 : isSelected ? 100 : Math.round(50 - distFromSelection),
+              transition: isAtCenter ? 'transform 0.3s ease-out' : undefined,
             }}
           >
             <BookCard
               book={book}
               isSelected={isSelected}
-              isLarge={showLarge}
-              onWishlist={showLarge ? onWishlist : undefined}
-              onSpinAgain={showLarge ? onSpinAgain : undefined}
-              onIgnore={showLarge ? onIgnore : undefined}
-              onCoverClick={showLarge ? onCoverClick : undefined}
+              showActions={isAtCenter}
+              onWishlist={isAtCenter ? onWishlist : undefined}
+              onSpinAgain={isAtCenter ? onSpinAgain : undefined}
+              onIgnore={isAtCenter ? onIgnore : undefined}
+              onCoverClick={isAtCenter ? onCoverClick : undefined}
               isInWishlist={isInWishlist}
             />
           </div>

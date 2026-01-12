@@ -4,7 +4,7 @@ import styles from './Carousel.module.css';
 interface BookCardProps {
   book: Book;
   isSelected?: boolean;
-  isLarge?: boolean;
+  showActions?: boolean;  // Show header and action buttons (only when stopped at center)
   onWishlist?: () => void;
   onSpinAgain?: () => void;
   onIgnore?: () => void;
@@ -15,54 +15,46 @@ interface BookCardProps {
 export function BookCard({
   book,
   isSelected = false,
-  isLarge = false,
+  showActions = false,
   onWishlist,
   onSpinAgain,
   onIgnore,
   onCoverClick,
   isInWishlist = false,
 }: BookCardProps) {
-  // Small card - just cover and title
-  if (!isLarge) {
-    return (
-      <div className={`${styles.card} ${isSelected ? styles.cardSelected : ''}`}>
-        <div className={styles.cardImageContainer}>
-          <img
-            src={book.imageUrl}
-            alt={book.title}
-            className={styles.cardImage}
-            loading="lazy"
-          />
-        </div>
-        <div className={styles.cardInfo}>
-          <div className={styles.cardTitle}>{book.title}</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Large card - full details matching the original dialog
   return (
     <div className={`${styles.cardLarge} ${isSelected ? styles.cardLargeSelected : ''}`}>
-      {/* Header */}
-      <div className={styles.cardLargeHeader}>
-        <span>RECOMMENDATION</span>
-      </div>
+      {/* Header - only when showing actions */}
+      {showActions && (
+        <div className={styles.cardLargeHeader}>
+          <span>RECOMMENDATION</span>
+        </div>
+      )}
 
       <div className={styles.cardLargeBody}>
-        {/* Cover image - clickable */}
-        <button
-          className={styles.cardLargeCover}
-          onClick={onCoverClick}
-          type="button"
-        >
-          <img
-            src={book.imageUrl}
-            alt={book.title}
-            className={styles.cardLargeCoverImg}
-          />
-          <span className={styles.cardLargeCoverHint}>View on Audible</span>
-        </button>
+        {/* Cover image - clickable only when showing actions */}
+        {showActions ? (
+          <button
+            className={styles.cardLargeCover}
+            onClick={onCoverClick}
+            type="button"
+          >
+            <img
+              src={book.imageUrl}
+              alt={book.title}
+              className={styles.cardLargeCoverImg}
+            />
+            <span className={styles.cardLargeCoverHint}>View on Audible</span>
+          </button>
+        ) : (
+          <div className={styles.cardLargeCover}>
+            <img
+              src={book.imageUrl}
+              alt={book.title}
+              className={styles.cardLargeCoverImg}
+            />
+          </div>
+        )}
 
         {/* Book info */}
         <div className={styles.cardLargeContent}>
@@ -94,31 +86,33 @@ export function BookCard({
         </div>
       </div>
 
-      {/* Actions */}
-      <div className={styles.cardActions}>
-        <button
-          className={`${styles.actionButton} ${styles.actionPrimary}`}
-          onClick={onWishlist}
-          disabled={isInWishlist}
-          type="button"
-        >
-          {isInWishlist ? 'In Wishlist' : 'Add to Wishlist'}
-        </button>
-        <button
-          className={`${styles.actionButton} ${styles.actionSecondary}`}
-          onClick={onSpinAgain}
-          type="button"
-        >
-          Spin Again
-        </button>
-        <button
-          className={`${styles.actionButton} ${styles.actionDanger}`}
-          onClick={onIgnore}
-          type="button"
-        >
-          Not Interested
-        </button>
-      </div>
+      {/* Actions - only when stopped at center */}
+      {showActions && (
+        <div className={styles.cardActions}>
+          <button
+            className={`${styles.actionButton} ${styles.actionPrimary}`}
+            onClick={onWishlist}
+            disabled={isInWishlist}
+            type="button"
+          >
+            {isInWishlist ? 'In Wishlist' : 'Add to Wishlist'}
+          </button>
+          <button
+            className={`${styles.actionButton} ${styles.actionSecondary}`}
+            onClick={onSpinAgain}
+            type="button"
+          >
+            Spin Again
+          </button>
+          <button
+            className={`${styles.actionButton} ${styles.actionDanger}`}
+            onClick={onIgnore}
+            type="button"
+          >
+            Not Interested
+          </button>
+        </div>
+      )}
     </div>
   );
 }
