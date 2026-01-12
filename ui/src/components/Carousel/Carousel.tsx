@@ -128,6 +128,9 @@ export function Carousel({
 
   return (
     <div className={styles.container}>
+      {/* Dark overlay - fades in when carousel stops */}
+      {showActions && <div className={styles.overlay} />}
+
       <div className={styles.viewport}>
         <CarouselTrack
           books={books}
