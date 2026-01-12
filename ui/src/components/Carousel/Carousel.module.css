@@ -280,44 +280,62 @@ button.cardLargeClickable {
 @media (max-width: 768px) {
   .viewport {
     /* Shift the wheel center up to make room for action bar */
-    transform: translateY(-12%);
+    transform: translateY(-8%);
   }
 
   .cardLarge {
-    width: 320px;
-    margin-left: -160px;
-    margin-top: -220px;
+    /* Responsive width based on viewport */
+    width: 90vw;
+    max-width: 400px;
+    /* Use max-height to fit above action bar (which is at bottom 4% + ~120px height) */
+    max-height: calc(100vh - 200px);
+    /* Center the card */
+    margin-left: -45vw;
+    margin-top: -30vh;
+    display: flex;
+    flex-direction: column;
   }
 
   .cardLargeBody {
     padding: var(--spacing-md);
     gap: var(--spacing-md);
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .cardLargeContent {
     text-align: center;
     align-items: center;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .cardLargeTitle {
     font-size: 18px;
+    flex-shrink: 0;
   }
 
   .cardLargeSubtitle {
     font-size: 12px;
+    flex-shrink: 0;
   }
 
   .cardLargeAuthor {
     font-size: 14px;
+    flex-shrink: 0;
   }
 
   .cardLargeSeries {
     font-size: 12px;
+    flex-shrink: 0;
   }
 
   .cardLargeStats {
     justify-content: center;
     gap: var(--spacing-md);
+    flex-shrink: 0;
   }
 
   .cardLargeStat {
@@ -327,20 +345,25 @@ button.cardLargeClickable {
   .cardLargeDescription {
     font-size: 12px;
     line-height: 1.5;
-    -webkit-line-clamp: 7;
+    /* Remove line clamp, let it scroll or fill available space */
+    -webkit-line-clamp: unset;
+    flex: 1;
+    overflow-y: auto;
+    text-align: left;
   }
 
   .cardLargeHint {
     font-size: 10px;
+    flex-shrink: 0;
   }
 
   button.cardLargeClickable {
-    margin-left: -160px;
-    margin-top: -220px;
+    margin-left: -45vw;
+    margin-top: -30vh;
   }
 
   .actionBar {
-    bottom: 4%;
+    bottom: 3%;
     left: var(--spacing-md);
     right: var(--spacing-md);
     transform: none;
