@@ -1,16 +1,7 @@
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo } from 'react';
 import type { Book } from '../../types/book';
 import { BookCard } from './BookCard';
 import styles from './Carousel.module.css';
-
-// Debug: Track position over time
-const DEBUG_CARD_INDEX = 0; // Track the first card
-const debugLog: Array<{ time: number; angle: number; x: number; y: number; scale: number; opacity: number }> = [];
-
-// Expose to window for debugging
-if (typeof window !== 'undefined') {
-  (window as unknown as { debugLog: typeof debugLog }).debugLog = debugLog;
-}
 
 interface CarouselTrackProps {
   books: Book[];
@@ -26,12 +17,15 @@ interface CarouselTrackProps {
 
 // Wheel configuration as percentages of viewport height
 const WHEEL_RADIUS_VH = 80;
-const WHEEL_CENTER_X_VH = -50;
-const WHEEL_CENTER_Y_VH = -20;
 
 // Selection point - where the "featured" card sits (in degrees)
-// At ~40 degrees with the wheel center upper-left, the card lands in center-right of viewport
 const SELECTION_ANGLE = 40;
+
+// Position wheel center so that a card at SELECTION_ANGLE lands at viewport center
+// Using: centerX = -radius * cos(angle), centerY = -radius * sin(angle)
+const SELECTION_RADIANS = (SELECTION_ANGLE * Math.PI) / 180;
+const WHEEL_CENTER_X_VH = -WHEEL_RADIUS_VH * Math.cos(SELECTION_RADIANS);
+const WHEEL_CENTER_Y_VH = -WHEEL_RADIUS_VH * Math.sin(SELECTION_RADIANS);
 
 export function CarouselTrack({
   books,
@@ -45,8 +39,6 @@ export function CarouselTrack({
   isInWishlist,
 }: CarouselTrackProps) {
   const anglePerItem = 360 / books.length;
-  const startTimeRef = useRef<number | null>(null);
-  const lastSpinningRef = useRef(spinning);
 
   const vh = useMemo(() => {
     if (typeof window !== 'undefined') {
@@ -54,22 +46,6 @@ export function CarouselTrack({
     }
     return 10;
   }, []);
-
-  // Debug: Reset log when spin starts
-  useEffect(() => {
-    if (spinning && !lastSpinningRef.current) {
-      // Spin just started
-      debugLog.length = 0;
-      startTimeRef.current = performance.now();
-      console.log('=== SPIN STARTED ===');
-    } else if (!spinning && lastSpinningRef.current) {
-      // Spin just ended
-      console.log('=== SPIN ENDED ===');
-      console.log('Debug log entries:', debugLog.length);
-      console.table(debugLog.slice(-20)); // Show last 20 entries
-    }
-    lastSpinningRef.current = spinning;
-  }, [spinning]);
 
   const wheelRadius = WHEEL_RADIUS_VH * vh;
   const wheelCenterX = WHEEL_CENTER_X_VH * vh;
@@ -115,7 +91,6 @@ export function CarouselTrack({
         if (distFromSelection > 180) distFromSelection = 360 - distFromSelection;
 
         const isSelected = selectedIndex !== null && index === selectedIndex;
-        const isAtSelection = distFromSelection < 20;
 
         // When stopped and selected, show large card; otherwise scale based on position
         const showLarge = !spinning && isSelected;
@@ -131,39 +106,14 @@ export function CarouselTrack({
           scale = MIN_SCALE + (MAX_SCALE - MIN_SCALE) * Math.pow(scaleProgress, 1.2);
         }
 
-        const isVisible = opacity > 0;
-
-        // Debug: Log position for tracked card
-        if (index === DEBUG_CARD_INDEX && spinning && startTimeRef.current) {
-          const elapsed = performance.now() - startTimeRef.current;
-          debugLog.push({
-            time: Math.round(elapsed),
-            rawAngle: Math.round(cardAngle * 10) / 10,  // The actual angle from props
-            effectiveAngle: Math.round(effectiveAngle * 10) / 10,
-            x: Math.round(x),
-            y: Math.round(y),
-            scale: Math.round(scale * 100) / 100,
-            opacity: Math.round(opacity * 100) / 100,
-          });
-        }
-
-        // For large card, position in center of screen instead of on the arc
-        const largeCardX = 0;  // Center horizontally (track is already at 50% left)
-        const largeCardY = 0;  // Center vertically (track is already at 50% top)
-
-        // Debug overlay for tracked card
-        const showDebug = index === DEBUG_CARD_INDEX;
-
         return (
           <div
             key={book.id}
             className={`${styles.cardWrapper} ${showLarge ? styles.cardWrapperLarge : ''}`}
-            style={{
-              transform: showLarge
-                ? `translate(${largeCardX}px, ${largeCardY}px)`
-                : `translate(${x}px, ${y}px) scale(${scale})`,
-              opacity: showLarge ? 1 : opacity,
-              zIndex: showLarge ? 200 : isSelected ? 100 : Math.round(50 - distFromSelection),
+            style={showLarge ? undefined : {
+              transform: `translate(${x}px, ${y}px) scale(${scale})`,
+              opacity: opacity,
+              zIndex: isSelected ? 100 : Math.round(50 - distFromSelection),
             }}
           >
             <BookCard
@@ -176,27 +126,6 @@ export function CarouselTrack({
               onCoverClick={showLarge ? onCoverClick : undefined}
               isInWishlist={isInWishlist}
             />
-            {/* Debug overlay */}
-            {showDebug && !showLarge && (
-              <div style={{
-                position: 'absolute',
-                top: -60,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: 'rgba(255, 0, 0, 0.9)',
-                color: 'white',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                fontSize: '10px',
-                fontFamily: 'monospace',
-                whiteSpace: 'nowrap',
-                zIndex: 9999,
-              }}>
-                <div>x: {Math.round(x)} y: {Math.round(y)}</div>
-                <div>angle: {Math.round(effectiveAngle)}° scale: {scale.toFixed(2)}</div>
-                <div>opacity: {opacity.toFixed(2)}</div>
-              </div>
-            )}
           </div>
         );
       })}

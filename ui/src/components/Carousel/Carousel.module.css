@@ -29,12 +29,24 @@
 }
 
 .cardWrapperLarge {
-  /* Use fixed positioning to center the large card in viewport */
+  /* Fixed position at viewport center with fade-in animation */
   position: fixed !important;
   top: 50% !important;
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
-  transition: none;
+  z-index: 200 !important;
+  animation: fadeInLarge 0.3s ease-out;
+}
+
+@keyframes fadeInLarge {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 /* Small card - thumbnail */
