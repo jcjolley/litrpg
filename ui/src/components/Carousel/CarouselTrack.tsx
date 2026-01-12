@@ -8,11 +8,7 @@ interface CarouselTrackProps {
   angle: number;
   selectedIndex: number | null;
   spinning: boolean;
-  onWishlist?: () => void;
-  onSpinAgain?: () => void;
-  onIgnore?: () => void;
   onCoverClick?: () => void;
-  isInWishlist?: boolean;
 }
 
 // Wheel configuration as percentages of viewport height
@@ -36,11 +32,7 @@ export function CarouselTrack({
   angle,
   selectedIndex,
   spinning,
-  onWishlist,
-  onSpinAgain,
-  onIgnore,
   onCoverClick,
-  isInWishlist,
 }: CarouselTrackProps) {
   const anglePerItem = 360 / books.length;
 
@@ -117,12 +109,8 @@ export function CarouselTrack({
             <BookCard
               book={book}
               isSelected={isSelected}
-              showActions={isAtCenter}
-              onWishlist={isAtCenter ? onWishlist : undefined}
-              onSpinAgain={isAtCenter ? onSpinAgain : undefined}
-              onIgnore={isAtCenter ? onIgnore : undefined}
+              isInteractive={isAtCenter}
               onCoverClick={isAtCenter ? onCoverClick : undefined}
-              isInWishlist={isInWishlist}
             />
           </div>
         );

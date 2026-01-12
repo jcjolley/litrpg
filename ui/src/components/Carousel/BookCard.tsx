@@ -4,36 +4,21 @@ import styles from './Carousel.module.css';
 interface BookCardProps {
   book: Book;
   isSelected?: boolean;
-  showActions?: boolean;  // Show header and action buttons (only when stopped at center)
-  onWishlist?: () => void;
-  onSpinAgain?: () => void;
-  onIgnore?: () => void;
+  isInteractive?: boolean;  // Can click cover to go to Audible
   onCoverClick?: () => void;
-  isInWishlist?: boolean;
 }
 
 export function BookCard({
   book,
   isSelected = false,
-  showActions = false,
-  onWishlist,
-  onSpinAgain,
-  onIgnore,
+  isInteractive = false,
   onCoverClick,
-  isInWishlist = false,
 }: BookCardProps) {
   return (
     <div className={`${styles.cardLarge} ${isSelected ? styles.cardLargeSelected : ''}`}>
-      {/* Header - only when showing actions */}
-      {showActions && (
-        <div className={styles.cardLargeHeader}>
-          <span>RECOMMENDATION</span>
-        </div>
-      )}
-
       <div className={styles.cardLargeBody}>
-        {/* Cover image - clickable only when showing actions */}
-        {showActions ? (
+        {/* Cover image - clickable when interactive */}
+        {isInteractive && onCoverClick ? (
           <button
             className={styles.cardLargeCover}
             onClick={onCoverClick}
@@ -85,34 +70,6 @@ export function BookCard({
           <p className={styles.cardLargeDescription}>{book.description}</p>
         </div>
       </div>
-
-      {/* Actions - only when stopped at center */}
-      {showActions && (
-        <div className={styles.cardActions}>
-          <button
-            className={`${styles.actionButton} ${styles.actionPrimary}`}
-            onClick={onWishlist}
-            disabled={isInWishlist}
-            type="button"
-          >
-            {isInWishlist ? 'In Wishlist' : 'Add to Wishlist'}
-          </button>
-          <button
-            className={`${styles.actionButton} ${styles.actionSecondary}`}
-            onClick={onSpinAgain}
-            type="button"
-          >
-            Spin Again
-          </button>
-          <button
-            className={`${styles.actionButton} ${styles.actionDanger}`}
-            onClick={onIgnore}
-            type="button"
-          >
-            Not Interested
-          </button>
-        </div>
-      )}
     </div>
   );
 }

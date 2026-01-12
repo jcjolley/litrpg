@@ -80,6 +80,7 @@ export function Carousel({
   }, [triggerSpin]);
 
   const isInWishlist = selectedBookId ? userWishlist.includes(selectedBookId) : false;
+  const showActions = spinState === 'stopped' && selectedIndex !== null;
 
   if (books.length === 0) {
     return (
@@ -97,13 +98,37 @@ export function Carousel({
           angle={angle}
           selectedIndex={selectedIndex}
           spinning={spinState === 'spinning'}
-          onWishlist={onWishlist}
-          onSpinAgain={onSpinAgain}
-          onIgnore={onIgnore}
           onCoverClick={onCoverClick}
-          isInWishlist={isInWishlist}
         />
       </div>
+
+      {/* Floating action bar - appears when stopped */}
+      {showActions && (
+        <div className={styles.actionBar}>
+          <button
+            className={`${styles.actionButton} ${styles.actionPrimary}`}
+            onClick={onWishlist}
+            disabled={isInWishlist}
+            type="button"
+          >
+            {isInWishlist ? 'In Wishlist' : 'Add to Wishlist'}
+          </button>
+          <button
+            className={`${styles.actionButton} ${styles.actionSecondary}`}
+            onClick={onSpinAgain}
+            type="button"
+          >
+            Spin Again
+          </button>
+          <button
+            className={`${styles.actionButton} ${styles.actionDanger}`}
+            onClick={onIgnore}
+            type="button"
+          >
+            Not Interested
+          </button>
+        </div>
+      )}
     </div>
   );
 }
