@@ -80,14 +80,8 @@ class AudibleScraper {
         }
 
         // Extract description - look for the JSON description field with HTML content
-        val description = Regex(""""description"\s*:\s*"((?:[^"\\]|\\.)*)"""")
-            .findAll(html)
-            .map { it.groupValues[1] }
-            .filter { it.contains("<p>") || it.length > 100 }  // Find the HTML description, not the meta one
-            .firstOrNull()
-            ?.let { unescapeJson(it) }
-            ?.let { stripHtml(it) }
-            ?: ""
+        // Use a simpler extraction to avoid regex catastrophic backtracking
+        val description = extractJsonDescription(html)
 
         // Extract cover image - look for the product image
         val imageUrl = Regex("""https://m\.media-amazon\.com/images/I/[^"]+\.jpg""")
@@ -165,6 +159,62 @@ class AudibleScraper {
         return html.replace(Regex("<[^>]+>"), " ")
             .replace(Regex("\\s+"), " ")
             .trim()
+    }
+
+    /**
+     * Extract JSON description field safely without catastrophic backtracking.
+     * Looks for "description": "<content>" and parses until the closing quote.
+     */
+    private fun extractJsonDescription(html: String): String {
+        // Find all occurrences of "description": "
+        val marker = "\"description\": \""
+        var searchStart = 0
+
+        while (true) {
+            val start = html.indexOf(marker, searchStart)
+            if (start == -1) break
+
+            val contentStart = start + marker.length
+            val content = extractJsonString(html, contentStart)
+
+            // We want the HTML description (contains <p> tags), not the meta description
+            if (content != null && (content.contains("<p>") || content.length > 200)) {
+                return stripHtml(unescapeJson(content))
+            }
+
+            searchStart = contentStart
+        }
+
+        return ""
+    }
+
+    /**
+     * Extract a JSON string value starting at the given position.
+     * Handles escape sequences properly.
+     */
+    private fun extractJsonString(html: String, startPos: Int): String? {
+        val sb = StringBuilder()
+        var i = startPos
+        var escaped = false
+
+        while (i < html.length && sb.length < 10000) { // Limit to prevent huge strings
+            val c = html[i]
+
+            if (escaped) {
+                sb.append(c)
+                escaped = false
+            } else if (c == '\\') {
+                sb.append(c)
+                escaped = true
+            } else if (c == '"') {
+                return sb.toString()
+            } else {
+                sb.append(c)
+            }
+            i++
+        }
+
+        return null // Didn't find closing quote
     }
 
     /**
