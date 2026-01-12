@@ -9,6 +9,7 @@ interface CarouselTrackProps {
   selectedIndex: number | null;
   spinning: boolean;
   onCoverClick?: () => void;
+  onCardClick?: (index: number) => void;
 }
 
 // Wheel configuration as percentages of viewport height
@@ -33,6 +34,7 @@ export function CarouselTrack({
   selectedIndex,
   spinning,
   onCoverClick,
+  onCardClick,
 }: CarouselTrackProps) {
   const anglePerItem = 360 / books.length;
 
@@ -95,6 +97,15 @@ export function CarouselTrack({
           ? MAX_SCALE
           : MIN_SCALE + (MAX_SCALE - MIN_SCALE) * Math.pow(scaleProgress, 2);
 
+        // Can click to select this card if visible, not spinning, and not already at center
+        const canClick = opacity > 0 && !spinning && !isAtCenter;
+
+        const handleCardClick = () => {
+          if (canClick && onCardClick) {
+            onCardClick(index);
+          }
+        };
+
         return (
           <div
             key={book.id}
@@ -104,7 +115,11 @@ export function CarouselTrack({
               opacity: opacity,
               zIndex: isAtCenter ? 200 : isSelected ? 100 : Math.round(50 - distFromSelection),
               transition: isAtCenter ? 'transform 0.3s ease-out' : undefined,
+              cursor: canClick ? 'pointer' : undefined,
             }}
+            onClick={handleCardClick}
+            role={canClick ? 'button' : undefined}
+            tabIndex={canClick ? 0 : undefined}
           >
             <BookCard
               book={book}

@@ -62,6 +62,13 @@ export function Carousel({
     startSpin(targetIndex);
   }, [books, userWishlist, spinState, selectBook, getTargetIndex, startSpin, onSpinStart]);
 
+  // Handle clicking on a non-selected card to focus it
+  const handleCardClick = useCallback((index: number) => {
+    if (spinState === 'spinning') return;
+    setSelectedIndex(null);
+    startSpin(index);
+  }, [spinState, startSpin]);
+
   // Auto-spin on mount
   useEffect(() => {
     if (books.length > 0 && spinState === 'idle') {
@@ -99,6 +106,7 @@ export function Carousel({
           selectedIndex={selectedIndex}
           spinning={spinState === 'spinning'}
           onCoverClick={onCoverClick}
+          onCardClick={handleCardClick}
         />
       </div>
 
