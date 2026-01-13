@@ -13,6 +13,10 @@ function loadStoredFilters(): BookFilters {
   }
 }
 
+interface UseBooksOptions {
+  bookLimit?: number;
+}
+
 interface UseBooksResult {
   books: Book[];
   loading: boolean;
@@ -22,26 +26,31 @@ interface UseBooksResult {
   refetch: () => Promise<void>;
 }
 
-export function useBooks(): UseBooksResult {
+export function useBooks(options: UseBooksOptions = {}): UseBooksResult {
+  const { bookLimit } = options;
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [filters, setFilters] = useState<BookFilters>(loadStoredFilters);
 
-  const fetchBooks = useCallback(async (currentFilters: BookFilters) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getBooks(currentFilters);
-      setBooks(data);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch books'));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchBooks = useCallback(
+    async (currentFilters: BookFilters) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const filtersWithLimit = { ...currentFilters, limit: bookLimit };
+        const data = await getBooks(filtersWithLimit);
+        setBooks(data);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to fetch books'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [bookLimit]
+  );
 
-  // Fetch when filters change
+  // Fetch when filters or bookLimit change
   useEffect(() => {
     fetchBooks(filters);
   }, [filters, fetchBooks]);

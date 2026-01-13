@@ -4,6 +4,52 @@
   overflow: hidden;
 }
 
+/* Golden border effect for completionist achievement */
+.goldenBorder {
+  position: relative;
+}
+
+.goldenBorder::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  border: 6px solid transparent;
+  border-image: linear-gradient(
+    45deg,
+    #ffd700 0%,
+    #ffec8b 25%,
+    #ffd700 50%,
+    #daa520 75%,
+    #ffd700 100%
+  ) 1;
+  z-index: 9999;
+  animation: goldenShimmer 3s ease-in-out infinite;
+}
+
+@keyframes goldenShimmer {
+  0%, 100% {
+    border-image: linear-gradient(
+      45deg,
+      #ffd700 0%,
+      #ffec8b 25%,
+      #ffd700 50%,
+      #daa520 75%,
+      #ffd700 100%
+    ) 1;
+  }
+  50% {
+    border-image: linear-gradient(
+      45deg,
+      #daa520 0%,
+      #ffd700 25%,
+      #ffec8b 50%,
+      #ffd700 75%,
+      #daa520 100%
+    ) 1;
+  }
+}
+
 /* Dark overlay that fades in when carousel stops */
 .overlay {
   position: fixed;

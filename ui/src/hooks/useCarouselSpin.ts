@@ -6,6 +6,7 @@ export type SpinState = 'idle' | 'spinning' | 'continuous' | 'stopped';
 interface UseCarouselSpinOptions {
   itemCount: number;
   spinDuration?: number;
+  spinSpeedMultiplier?: number; // 1.0 = normal, 0.5 = 2x faster (half duration)
   continuousSpeed?: number; // degrees per second for continuous spin
   onSpinComplete?: (targetIndex: number) => void;
 }
@@ -22,9 +23,12 @@ interface UseCarouselSpinResult {
 export function useCarouselSpin({
   itemCount,
   spinDuration = 4000,
+  spinSpeedMultiplier = 1.0,
   continuousSpeed = 30, // 30 degrees per second = 1 full rotation every 12 seconds
   onSpinComplete,
 }: UseCarouselSpinOptions): UseCarouselSpinResult {
+  // Apply speed multiplier to duration (lower multiplier = faster = shorter duration)
+  const effectiveDuration = spinDuration * spinSpeedMultiplier;
   const [angle, setAngle] = useState(0);
   const [spinState, setSpinState] = useState<SpinState>('idle');
 
@@ -110,7 +114,7 @@ export function useCarouselSpin({
 
       const animate = (currentTime: number) => {
         const elapsed = currentTime - startTimeRef.current;
-        const progress = Math.min(elapsed / spinDuration, 1);
+        const progress = Math.min(elapsed / effectiveDuration, 1);
         const easedProgress = carouselEase(progress);
 
         const totalRotation = targetAngleRef.current - startAngleRef.current;
@@ -129,7 +133,7 @@ export function useCarouselSpin({
 
       animationRef.current = requestAnimationFrame(animate);
     },
-    [getAngleForIndex, spinDuration, onSpinComplete]
+    [getAngleForIndex, effectiveDuration, onSpinComplete]
   );
 
   const startSpin = useCallback(
@@ -161,7 +165,7 @@ export function useCarouselSpin({
 
       const animate = (currentTime: number) => {
         const elapsed = currentTime - startTimeRef.current;
-        const progress = Math.min(elapsed / spinDuration, 1);
+        const progress = Math.min(elapsed / effectiveDuration, 1);
         const easedProgress = carouselEase(progress);
 
         const totalRotation = targetAngleRef.current - startAngleRef.current;
@@ -179,7 +183,7 @@ export function useCarouselSpin({
 
       animationRef.current = requestAnimationFrame(animate);
     },
-    [spinState, angle, getAngleForIndex, spinDuration, onSpinComplete]
+    [spinState, angle, getAngleForIndex, effectiveDuration, onSpinComplete]
   );
 
   const reset = useCallback(() => {

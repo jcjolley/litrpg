@@ -17,6 +17,8 @@ interface CarouselProps {
   onCoverClick?: () => void;
   selectedBookId?: string | null;
   continuousSpin?: boolean; // When true, spin indefinitely until released
+  spinSpeedMultiplier?: number; // Speed modifier (1.0 = normal, 0.5 = 2x faster)
+  hasGoldenBorder?: boolean; // Shows golden border effect (completionist achievement)
 }
 
 export function Carousel({
@@ -31,6 +33,8 @@ export function Carousel({
   onCoverClick,
   selectedBookId,
   continuousSpin = false,
+  spinSpeedMultiplier = 1.0,
+  hasGoldenBorder = false,
 }: CarouselProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const { selectBook, getTargetIndex } = useWeightedSelection();
@@ -49,6 +53,7 @@ export function Carousel({
   const { angle, spinState, startSpin, startContinuousSpin, stopAndLand } = useCarouselSpin({
     itemCount: books.length,
     spinDuration: 4000,
+    spinSpeedMultiplier,
     onSpinComplete: handleSpinComplete,
   });
 
@@ -124,8 +129,12 @@ export function Carousel({
     );
   }
 
+  const containerClasses = [styles.container, hasGoldenBorder && styles.goldenBorder]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div className={styles.container}>
+    <div className={containerClasses}>
       <div className={styles.viewport}>
         <CarouselTrack
           books={books}

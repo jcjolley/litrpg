@@ -1,0 +1,1 @@
+export { WishlistPanel } from './WishlistPanel';

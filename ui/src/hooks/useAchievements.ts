@@ -3,11 +3,17 @@ import { useState, useEffect, useCallback } from 'react';
 const ACHIEVEMENTS_KEY = 'litrpg-achievements';
 
 // Achievement definitions
+export type EffectType = 'books' | 'speed' | 'feature' | 'visual';
+
 export interface Achievement {
   id: string;
   title: string;
   subtitle: string;
   description: string;
+  effect?: string; // Human-readable effect description
+  effectType?: EffectType;
+  effectValue?: number; // e.g., 10 for +10 books, 0.75 for 25% faster
+  themeUnlock?: string; // Theme ID unlocked by this achievement
 }
 
 export const ACHIEVEMENTS: Record<string, Achievement> = {
@@ -16,38 +22,86 @@ export const ACHIEVEMENTS: Record<string, Achievement> = {
     title: 'ACHIEVEMENT UNLOCKED!',
     subtitle: 'The Contrarian',
     description: 'Said "No" when asked if you like LitRPG',
+    effect: 'Snarky tooltips enabled',
+    effectType: 'feature',
   },
   firstWishlist: {
     id: 'firstWishlist',
     title: 'ACHIEVEMENT UNLOCKED!',
     subtitle: 'Curious Reader',
     description: 'Added your first book to the wishlist',
+    effect: 'Wishlist export unlocked',
+    effectType: 'feature',
   },
   wishlist5: {
     id: 'wishlist5',
     title: 'ACHIEVEMENT UNLOCKED!',
     subtitle: 'Book Hoarder',
     description: 'Added 5 books to your wishlist',
+    effect: '+10 books available (30 total)',
+    effectType: 'books',
+    effectValue: 10,
   },
   wishlist10: {
     id: 'wishlist10',
     title: 'ACHIEVEMENT UNLOCKED!',
     subtitle: 'Library Builder',
     description: 'Added 10 books to your wishlist',
+    effect: '+20 books available (50 total)',
+    effectType: 'books',
+    effectValue: 20,
+    themeUnlock: 'gilded-gold',
   },
   picky: {
     id: 'picky',
     title: 'ACHIEVEMENT UNLOCKED!',
     subtitle: 'The Critic',
     description: 'Marked 10 books as not interested',
+    effect: '25% faster carousel spin',
+    effectType: 'speed',
+    effectValue: 0.75,
+    themeUnlock: 'noir',
   },
   explorer: {
     id: 'explorer',
     title: 'ACHIEVEMENT UNLOCKED!',
     subtitle: 'Genre Explorer',
     description: 'Tried filtering by 3 different genres',
+    effect: '"Surprise Me" filter unlocked',
+    effectType: 'feature',
+    themeUnlock: 'forest-green',
+  },
+  speedReader: {
+    id: 'speedReader',
+    title: 'ACHIEVEMENT UNLOCKED!',
+    subtitle: 'Speed Reader',
+    description: 'Spun the carousel 50 times',
+    effect: '50% faster carousel spin',
+    effectType: 'speed',
+    effectValue: 0.5,
+    themeUnlock: 'crimson-red',
+  },
+  completionist: {
+    id: 'completionist',
+    title: 'ACHIEVEMENT UNLOCKED!',
+    subtitle: 'Completionist',
+    description: 'Unlocked all other achievements',
+    effect: 'Golden carousel border',
+    effectType: 'visual',
+    themeUnlock: 'rainbow-shift',
   },
 };
+
+// Achievements required for completionist (all except completionist itself)
+const COMPLETIONIST_REQUIREMENTS = [
+  'contrarian',
+  'firstWishlist',
+  'wishlist5',
+  'wishlist10',
+  'picky',
+  'explorer',
+  'speedReader',
+];
 
 interface StoredAchievements {
   unlocked: string[];
@@ -63,7 +117,9 @@ interface UseAchievementsResult {
   unlock: (achievementId: string) => Achievement | null;
   stats: StoredAchievements['stats'];
   trackGenreExplored: (genre: string) => Achievement | null;
-  trackSpin: () => void;
+  trackSpin: () => Achievement | null;
+  pendingCompletionist: Achievement | null;
+  consumeCompletionist: () => void;
 }
 
 const defaultStats: StoredAchievements['stats'] = {
@@ -91,6 +147,23 @@ export function useAchievements(): UseAchievementsResult {
   useEffect(() => {
     localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(data));
   }, [data]);
+
+  // Check for completionist achievement when unlocked achievements change
+  const [pendingCompletionist, setPendingCompletionist] = useState<Achievement | null>(null);
+
+  useEffect(() => {
+    // Check if all requirements are met and completionist not already unlocked
+    const hasAllRequired = COMPLETIONIST_REQUIREMENTS.every((id) => data.unlocked.includes(id));
+    const alreadyHasCompletionist = data.unlocked.includes('completionist');
+
+    if (hasAllRequired && !alreadyHasCompletionist) {
+      setData((prev) => ({
+        ...prev,
+        unlocked: [...prev.unlocked, 'completionist'],
+      }));
+      setPendingCompletionist(ACHIEVEMENTS.completionist);
+    }
+  }, [data.unlocked]);
 
   const isUnlocked = useCallback(
     (achievementId: string) => data.unlocked.includes(achievementId),
@@ -140,11 +213,30 @@ export function useAchievements(): UseAchievementsResult {
     [data.stats.genresExplored, data.unlocked]
   );
 
-  const trackSpin = useCallback(() => {
-    setData((prev) => ({
-      ...prev,
-      stats: { ...prev.stats, totalSpins: prev.stats.totalSpins + 1 },
-    }));
+  const trackSpin = useCallback((): Achievement | null => {
+    let unlockedAchievement: Achievement | null = null;
+
+    setData((prev) => {
+      const newSpins = prev.stats.totalSpins + 1;
+      const newData = {
+        ...prev,
+        stats: { ...prev.stats, totalSpins: newSpins },
+      };
+
+      // Check for speedReader achievement at 50 spins
+      if (newSpins >= 50 && !prev.unlocked.includes('speedReader')) {
+        newData.unlocked = [...prev.unlocked, 'speedReader'];
+        unlockedAchievement = ACHIEVEMENTS.speedReader;
+      }
+
+      return newData;
+    });
+
+    return unlockedAchievement;
+  }, []);
+
+  const consumeCompletionist = useCallback(() => {
+    setPendingCompletionist(null);
   }, []);
 
   return {
@@ -154,5 +246,7 @@ export function useAchievements(): UseAchievementsResult {
     stats: data.stats,
     trackGenreExplored,
     trackSpin,
+    pendingCompletionist,
+    consumeCompletionist,
   };
 }

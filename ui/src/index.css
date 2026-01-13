@@ -68,9 +68,36 @@ img {
 }
 
 .header {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: var(--spacing-sm) 0;
   flex-shrink: 0;
+}
+
+.stats-button {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, var(--ff-blue-light) 0%, var(--ff-blue-mid) 100%);
+  border: 3px solid var(--ff-border-outer);
+  box-shadow: inset 0 0 0 2px var(--ff-border-inner);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 20px;
+}
+
+.stats-button:hover:not(:disabled) {
+  background: linear-gradient(180deg, #2040b0 0%, var(--ff-blue-light) 100%);
+  transform: scale(1.05);
+}
+
+.stats-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .title {

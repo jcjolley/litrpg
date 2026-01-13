@@ -1,25 +1,143 @@
-:root {
-  /* Final Fantasy III Blue Theme */
+/* ============================================
+   Theme System - Color Variables
+   ============================================ */
+
+/* Classic Blue (Default) - Final Fantasy III Style */
+:root,
+:root[data-theme="classic-blue"] {
   --ff-blue-dark: #000020;
   --ff-blue-mid: #000848;
   --ff-blue-light: #1028a0;
 
-  /* Border colors - FF3 style double border */
-  --ff-border-outer: #98b8d8;  /* Light steel blue outer edge */
-  --ff-border-inner: #3850a8;  /* Mid blue inner highlight */
-  --ff-border-shadow: #000030; /* Dark shadow for depth */
+  --ff-border-outer: #98b8d8;
+  --ff-border-inner: #3850a8;
+  --ff-border-shadow: #000030;
 
-  /* Text colors */
   --ff-text-primary: #ffffff;
   --ff-text-secondary: #b0c0e0;
-  --ff-text-highlight: #f8e800;  /* Classic FF yellow */
+  --ff-text-highlight: #f8e800;
   --ff-text-muted: #6080b0;
 
-  /* Action colors */
   --ff-action-confirm: #40c040;
   --ff-action-cancel: #c04040;
   --ff-action-neutral: #4080c0;
+}
 
+/* Gilded Gold - Unlocked by Library Builder */
+:root[data-theme="gilded-gold"] {
+  --ff-blue-dark: #1a1408;
+  --ff-blue-mid: #3d2f10;
+  --ff-blue-light: #8b7320;
+
+  --ff-border-outer: #ffd700;
+  --ff-border-inner: #b8860b;
+  --ff-border-shadow: #1a1408;
+
+  --ff-text-primary: #fff8dc;
+  --ff-text-secondary: #daa520;
+  --ff-text-highlight: #ffd700;
+  --ff-text-muted: #8b7355;
+
+  --ff-action-confirm: #9acd32;
+  --ff-action-cancel: #cd853f;
+  --ff-action-neutral: #daa520;
+}
+
+/* Noir - Unlocked by The Critic */
+:root[data-theme="noir"] {
+  --ff-blue-dark: #0a0a0a;
+  --ff-blue-mid: #1a1a1a;
+  --ff-blue-light: #2a2a2a;
+
+  --ff-border-outer: #4a4a4a;
+  --ff-border-inner: #3a3a3a;
+  --ff-border-shadow: #000000;
+
+  --ff-text-primary: #e0e0e0;
+  --ff-text-secondary: #a0a0a0;
+  --ff-text-highlight: #ff4444;
+  --ff-text-muted: #606060;
+
+  --ff-action-confirm: #4a9a4a;
+  --ff-action-cancel: #aa3333;
+  --ff-action-neutral: #5a5a5a;
+}
+
+/* Forest Green - Unlocked by Genre Explorer */
+:root[data-theme="forest-green"] {
+  --ff-blue-dark: #001408;
+  --ff-blue-mid: #002810;
+  --ff-blue-light: #1a5028;
+
+  --ff-border-outer: #4a8858;
+  --ff-border-inner: #2a6838;
+  --ff-border-shadow: #001408;
+
+  --ff-text-primary: #e8f5e0;
+  --ff-text-secondary: #98c890;
+  --ff-text-highlight: #ffb830;
+  --ff-text-muted: #508850;
+
+  --ff-action-confirm: #60c060;
+  --ff-action-cancel: #c06030;
+  --ff-action-neutral: #40a080;
+}
+
+/* Crimson Red - Unlocked by Speed Reader */
+:root[data-theme="crimson-red"] {
+  --ff-blue-dark: #140008;
+  --ff-blue-mid: #280010;
+  --ff-blue-light: #501828;
+
+  --ff-border-outer: #b84848;
+  --ff-border-inner: #882828;
+  --ff-border-shadow: #100008;
+
+  --ff-text-primary: #ffe8e8;
+  --ff-text-secondary: #d0a0a0;
+  --ff-text-highlight: #ffd700;
+  --ff-text-muted: #885050;
+
+  --ff-action-confirm: #60b060;
+  --ff-action-cancel: #d04040;
+  --ff-action-neutral: #a05050;
+}
+
+/* Rainbow Shift - Unlocked by Completionist */
+:root[data-theme="rainbow-shift"] {
+  --ff-blue-dark: #000020;
+  --ff-blue-mid: #000848;
+  --ff-blue-light: #1028a0;
+
+  --ff-border-outer: #98b8d8;
+  --ff-border-inner: #3850a8;
+  --ff-border-shadow: #000030;
+
+  --ff-text-primary: #ffffff;
+  --ff-text-secondary: #b0c0e0;
+  --ff-text-highlight: #f8e800;
+  --ff-text-muted: #6080b0;
+
+  --ff-action-confirm: #40c040;
+  --ff-action-cancel: #c04040;
+  --ff-action-neutral: #4080c0;
+}
+
+/* Rainbow animation applied to the whole page */
+:root[data-theme="rainbow-shift"] body {
+  animation: rainbow-cycle 15s linear infinite;
+}
+
+@keyframes rainbow-cycle {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+/* ============================================
+   Shared Variables (Theme-Independent)
+   ============================================ */
+
+:root {
   /* Spacing */
   --spacing-xs: 4px;
   --spacing-sm: 8px;

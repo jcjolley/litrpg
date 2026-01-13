@@ -1,0 +1,135 @@
+/* Backdrop */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 500;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Dialog */
+.dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 380px;
+  max-width: 90vw;
+  background: linear-gradient(180deg, var(--ff-blue-mid) 0%, var(--ff-blue-dark) 100%);
+  border: 4px solid var(--ff-border-outer);
+  box-shadow:
+    inset 0 0 0 4px var(--ff-border-inner),
+    inset 0 0 0 6px var(--ff-border-shadow),
+    0 8px 32px rgba(0, 0, 0, 0.8);
+  border-radius: 12px;
+  z-index: 501;
+  animation: popIn 0.3s ease-out;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Header */
+.header {
+  padding: var(--spacing-lg);
+  border-bottom: 2px solid var(--ff-border-inner);
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--ff-action-cancel);
+  letter-spacing: 2px;
+}
+
+/* Body */
+.body {
+  padding: var(--spacing-lg);
+}
+
+.warning {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--ff-text-primary);
+  margin: 0 0 var(--spacing-md);
+}
+
+.list {
+  margin: 0 0 var(--spacing-md);
+  padding-left: var(--spacing-lg);
+  color: var(--ff-text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.list li {
+  margin-bottom: var(--spacing-xs);
+}
+
+.note {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--ff-text-highlight);
+  text-align: center;
+  margin: 0;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  border-top: 2px solid var(--ff-border-inner);
+}
+
+.cancelButton,
+.confirmButton {
+  flex: 1;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: 3px solid var(--ff-border-outer);
+  box-shadow: inset 0 0 0 2px var(--ff-border-inner);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.cancelButton {
+  background: linear-gradient(180deg, var(--ff-blue-light) 0%, var(--ff-blue-mid) 100%);
+  color: var(--ff-text-primary);
+}
+
+.cancelButton:hover {
+  background: linear-gradient(180deg, #2040b0 0%, var(--ff-blue-light) 100%);
+}
+
+.confirmButton {
+  background: linear-gradient(180deg, #802020 0%, #401010 100%);
+  color: var(--ff-text-primary);
+}
+
+.confirmButton:hover {
+  background: linear-gradient(180deg, #a03030 0%, #602020 100%);
+}

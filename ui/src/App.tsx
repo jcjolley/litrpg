@@ -1,23 +1,32 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { Carousel } from './components/Carousel';
 import { OnboardingDialog } from './components/OnboardingDialog';
 import { AchievementNotification } from './components/AchievementNotification';
 import { FilterMenu } from './components/FilterMenu';
+import { StatsPanel } from './components/StatsPanel';
+import { WishlistPanel } from './components/WishlistPanel';
+import { RemortDialog } from './components/RemortDialog';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { useBooks } from './hooks/useBooks';
 import { useWishlist } from './hooks/useWishlist';
 import { useNotInterested } from './hooks/useNotInterested';
 import { useAchievements, type Achievement } from './hooks/useAchievements';
+import { useAchievementEffects } from './hooks/useAchievementEffects';
 import { recordImpression, recordClick, recordWishlist, recordNotInterested } from './api/books';
 import type { Book } from './types/book';
 
 type OnboardingPhase = 'initial' | 'snarky';
 
 export default function App() {
-  const { books, loading, error, filters, setFilters } = useBooks();
-  const { wishlist, addToWishlist, count: wishlistCount } = useWishlist();
+  // Achievement system - must be first as other hooks depend on effects
+  const { unlock, trackGenreExplored, unlockedAchievements, trackSpin, pendingCompletionist, consumeCompletionist, stats } = useAchievements();
+  const achievementEffects = useAchievementEffects(unlockedAchievements);
+
+  // Data hooks
+  const { books, loading, error, filters, setFilters } = useBooks({ bookLimit: achievementEffects.bookLimit });
+  const { wishlist, addToWishlist, removeFromWishlist, count: wishlistCount } = useWishlist();
   const { notInterestedIds, addNotInterested, count: notInterestedCount } = useNotInterested();
-  const { unlock, trackGenreExplored } = useAchievements();
 
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [triggerSpin, setTriggerSpin] = useState(false);
@@ -26,6 +35,11 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [onboardingPhase, setOnboardingPhase] = useState<OnboardingPhase>('initial');
   const [currentAchievement, setCurrentAchievement] = useState<Achievement | null>(null);
+
+  // Stats panel, wishlist panel, and remort dialog state
+  const [showStatsPanel, setShowStatsPanel] = useState(false);
+  const [showWishlistPanel, setShowWishlistPanel] = useState(false);
+  const [showRemortDialog, setShowRemortDialog] = useState(false);
 
   // Filter out not-interested books
   const filteredBooks = useMemo(
@@ -50,13 +64,19 @@ export default function App() {
   const handleBookSelected = useCallback(async (book: Book) => {
     setSelectedBook(book);
 
+    // Track spin for speedReader achievement
+    const speedReaderAchievement = trackSpin();
+    if (speedReaderAchievement) {
+      showAchievementNotification(speedReaderAchievement);
+    }
+
     // Record impression
     try {
       await recordImpression(book.id);
     } catch (err) {
       console.error('Failed to record impression:', err);
     }
-  }, []);
+  }, [trackSpin, showAchievementNotification]);
 
   const handleSpinStart = useCallback(() => {
     setSelectedBook(null);
@@ -162,65 +182,127 @@ export default function App() {
     [setFilters, trackGenreExplored, showAchievementNotification]
   );
 
+  // Watch for completionist achievement (auto-unlocked when all others are obtained)
+  useEffect(() => {
+    if (pendingCompletionist) {
+      showAchievementNotification(pendingCompletionist);
+      consumeCompletionist();
+    }
+  }, [pendingCompletionist, showAchievementNotification, consumeCompletionist]);
+
   if (loading) {
     return (
-      <div className="loading-container">
-        <div className="loading-text">Loading books...</div>
-      </div>
+      <ThemeProvider unlockedAchievements={unlockedAchievements}>
+        <div className="loading-container">
+          <div className="loading-text">Loading books...</div>
+        </div>
+      </ThemeProvider>
     );
   }
 
   if (error) {
     return (
-      <div className="error-container">
-        <div className="error-text">Failed to load books</div>
-        <div className="error-detail">{error.message}</div>
-      </div>
+      <ThemeProvider unlockedAchievements={unlockedAchievements}>
+        <div className="error-container">
+          <div className="error-text">Failed to load books</div>
+          <div className="error-detail">{error.message}</div>
+        </div>
+      </ThemeProvider>
     );
   }
 
   return (
-    <div className="app">
-      <header className="header">
-        <FilterMenu
-          filters={filters}
-          onFiltersChange={handleFiltersChange}
-          disabled={showOnboarding}
+    <ThemeProvider unlockedAchievements={unlockedAchievements}>
+      <div className="app">
+        <header className="header">
+          <button
+            className="stats-button"
+            onClick={() => setShowWishlistPanel(true)}
+            disabled={showOnboarding}
+            type="button"
+            title="Wishlist"
+          >
+            <span role="img" aria-label="books">&#128218;</span>
+          </button>
+          <FilterMenu
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            disabled={showOnboarding}
+          />
+          <button
+            className="stats-button"
+            onClick={() => setShowStatsPanel(true)}
+            disabled={showOnboarding}
+            type="button"
+            title="Reader Stats"
+          >
+            <span role="img" aria-label="trophy">&#127942;</span>
+          </button>
+        </header>
+
+        <main className="main">
+          <Carousel
+            books={filteredBooks}
+            userWishlist={wishlist}
+            onBookSelected={handleBookSelected}
+            triggerSpin={triggerSpin}
+            onSpinStart={handleSpinStart}
+            onWishlist={handleWishlist}
+            onSpinAgain={handleSpinAgain}
+            onIgnore={handleIgnore}
+            onCoverClick={handleCoverClick}
+            selectedBookId={selectedBook?.id}
+            continuousSpin={showOnboarding}
+            spinSpeedMultiplier={achievementEffects.spinSpeedMultiplier}
+            hasGoldenBorder={achievementEffects.hasGoldenBorder}
+          />
+        </main>
+
+        <OnboardingDialog
+          isOpen={showOnboarding}
+          phase={onboardingPhase}
+          onYes={handleOnboardingYes}
+          onNo={handleOnboardingNo}
+          onCountdownComplete={handleCountdownComplete}
         />
-      </header>
 
-      <main className="main">
-        <Carousel
-          books={filteredBooks}
-          userWishlist={wishlist}
-          onBookSelected={handleBookSelected}
-          triggerSpin={triggerSpin}
-          onSpinStart={handleSpinStart}
-          onWishlist={handleWishlist}
-          onSpinAgain={handleSpinAgain}
-          onIgnore={handleIgnore}
-          onCoverClick={handleCoverClick}
-          selectedBookId={selectedBook?.id}
-          continuousSpin={showOnboarding}
+        <AchievementNotification
+          title={currentAchievement?.title ?? ''}
+          subtitle={currentAchievement?.subtitle ?? ''}
+          description={currentAchievement?.description}
+          isVisible={currentAchievement !== null}
+          onDismiss={handleAchievementDismiss}
+          duration={6000}
         />
-      </main>
 
-      <OnboardingDialog
-        isOpen={showOnboarding}
-        phase={onboardingPhase}
-        onYes={handleOnboardingYes}
-        onNo={handleOnboardingNo}
-        onCountdownComplete={handleCountdownComplete}
-      />
+        <WishlistPanel
+          isOpen={showWishlistPanel}
+          onClose={() => setShowWishlistPanel(false)}
+          wishlistIds={wishlist}
+          books={books}
+          onRemove={removeFromWishlist}
+          unlockedAchievements={unlockedAchievements}
+        />
 
-      <AchievementNotification
-        title={currentAchievement?.title ?? ''}
-        subtitle={currentAchievement?.subtitle ?? ''}
-        description={currentAchievement?.description}
-        isVisible={currentAchievement !== null}
-        onDismiss={handleAchievementDismiss}
-        duration={6000}
-      />
-    </div>
+        <StatsPanel
+          isOpen={showStatsPanel}
+          onClose={() => setShowStatsPanel(false)}
+          unlockedAchievements={unlockedAchievements}
+          stats={stats}
+          wishlistCount={wishlistCount}
+          notInterestedCount={notInterestedCount}
+          onRemort={() => {
+            setShowStatsPanel(false);
+            setShowRemortDialog(true);
+          }}
+        />
+
+        <RemortDialog
+          isOpen={showRemortDialog}
+          onConfirm={() => {}}
+          onCancel={() => setShowRemortDialog(false)}
+        />
+      </div>
+    </ThemeProvider>
   );
 }
