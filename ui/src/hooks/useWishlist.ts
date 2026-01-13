@@ -8,6 +8,7 @@ interface UseWishlistResult {
   removeFromWishlist: (bookId: string) => void;
   isInWishlist: (bookId: string) => boolean;
   clearWishlist: () => void;
+  count: number;
 }
 
 export function useWishlist(): UseWishlistResult {
@@ -50,5 +51,6 @@ export function useWishlist(): UseWishlistResult {
     removeFromWishlist,
     isInWishlist,
     clearWishlist,
+    count: wishlist.length,
   };
 }

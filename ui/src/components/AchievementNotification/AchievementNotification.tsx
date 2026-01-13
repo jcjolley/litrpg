@@ -4,6 +4,7 @@ import styles from './AchievementNotification.module.css';
 interface AchievementNotificationProps {
   title: string;
   subtitle: string;
+  description?: string;
   isVisible: boolean;
   onDismiss?: () => void;
   duration?: number;
@@ -12,6 +13,7 @@ interface AchievementNotificationProps {
 export function AchievementNotification({
   title,
   subtitle,
+  description,
   isVisible,
   onDismiss,
   duration = 3000,
@@ -46,6 +48,7 @@ export function AchievementNotification({
       <div className={styles.content}>
         <div className={styles.title}>{title}</div>
         <div className={styles.subtitle}>"{subtitle}"</div>
+        {description && <div className={styles.description}>{description}</div>}
       </div>
     </div>
   );

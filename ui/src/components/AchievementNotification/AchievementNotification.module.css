@@ -79,6 +79,12 @@
   color: var(--ff-text-primary);
 }
 
+.description {
+  font-size: 8px;
+  color: var(--ff-text-secondary);
+  margin-top: 2px;
+}
+
 /* Mobile responsiveness */
 @media (max-width: 600px) {
   .notification {

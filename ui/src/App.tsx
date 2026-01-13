@@ -1,18 +1,23 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import { Carousel } from './components/Carousel';
 import { OnboardingDialog } from './components/OnboardingDialog';
 import { AchievementNotification } from './components/AchievementNotification';
+import { FilterMenu } from './components/FilterMenu';
 import { useBooks } from './hooks/useBooks';
 import { useWishlist } from './hooks/useWishlist';
+import { useNotInterested } from './hooks/useNotInterested';
+import { useAchievements, type Achievement } from './hooks/useAchievements';
 import { recordImpression, recordClick, recordWishlist, recordNotInterested } from './api/books';
 import type { Book } from './types/book';
 
 type OnboardingPhase = 'initial' | 'snarky';
 
 export default function App() {
-  const { books, loading, error } = useBooks();
-  const { wishlist, addToWishlist } = useWishlist();
+  const { books, loading, error, filters, setFilters } = useBooks();
+  const { wishlist, addToWishlist, count: wishlistCount } = useWishlist();
+  const { notInterestedIds, addNotInterested, count: notInterestedCount } = useNotInterested();
+  const { unlock, trackGenreExplored } = useAchievements();
 
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [triggerSpin, setTriggerSpin] = useState(false);
@@ -20,7 +25,27 @@ export default function App() {
   // Onboarding state
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [onboardingPhase, setOnboardingPhase] = useState<OnboardingPhase>('initial');
-  const [showAchievement, setShowAchievement] = useState(false);
+  const [currentAchievement, setCurrentAchievement] = useState<Achievement | null>(null);
+
+  // Filter out not-interested books
+  const filteredBooks = useMemo(
+    () => books.filter((book) => !notInterestedIds.includes(book.id)),
+    [books, notInterestedIds]
+  );
+
+  // Show achievement notification
+  const showAchievementNotification = useCallback((achievement: Achievement | null) => {
+    if (achievement) {
+      setCurrentAchievement(achievement);
+      // Fire confetti for any achievement
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#f8e800', '#40c040', '#4080c0', '#c04040', '#ffffff'],
+      });
+    }
+  }, []);
 
   const handleBookSelected = useCallback(async (book: Book) => {
     setSelectedBook(book);
@@ -49,9 +74,19 @@ export default function App() {
       console.error('Failed to record wishlist:', err);
     }
 
+    // Check for wishlist achievements
+    const newCount = wishlistCount + 1;
+    if (newCount === 1) {
+      showAchievementNotification(unlock('firstWishlist'));
+    } else if (newCount === 5) {
+      showAchievementNotification(unlock('wishlist5'));
+    } else if (newCount === 10) {
+      showAchievementNotification(unlock('wishlist10'));
+    }
+
     // Spin again after wishlisting
     setTriggerSpin(true);
-  }, [selectedBook, addToWishlist]);
+  }, [selectedBook, addToWishlist, wishlistCount, unlock, showAchievementNotification]);
 
   const handleSpinAgain = useCallback(() => {
     setTriggerSpin(true);
@@ -59,14 +94,22 @@ export default function App() {
 
   const handleIgnore = useCallback(async () => {
     if (selectedBook) {
+      addNotInterested(selectedBook.id);
+
       try {
         await recordNotInterested(selectedBook.id);
       } catch (err) {
         console.error('Failed to record not interested:', err);
       }
+
+      // Check for picky achievement (10 books marked as not interested)
+      const newCount = notInterestedCount + 1;
+      if (newCount === 10) {
+        showAchievementNotification(unlock('picky'));
+      }
     }
     setTriggerSpin(true);
-  }, [selectedBook]);
+  }, [selectedBook, addNotInterested, notInterestedCount, unlock, showAchievementNotification]);
 
   const handleCoverClick = useCallback(async () => {
     if (!selectedBook) return;
@@ -86,20 +129,13 @@ export default function App() {
   }, []);
 
   const handleOnboardingNo = useCallback(() => {
-    // Fire confetti
-    confetti({
-      particleCount: 150,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#f8e800', '#40c040', '#4080c0', '#c04040', '#ffffff'],
-    });
-
-    // Show achievement
-    setShowAchievement(true);
+    // Unlock and show the contrarian achievement
+    const achievement = unlock('contrarian');
+    showAchievementNotification(achievement);
 
     // Switch to snarky phase
     setOnboardingPhase('snarky');
-  }, []);
+  }, [unlock, showAchievementNotification]);
 
   const handleCountdownComplete = useCallback(() => {
     setShowOnboarding(false);
@@ -107,8 +143,24 @@ export default function App() {
   }, []);
 
   const handleAchievementDismiss = useCallback(() => {
-    setShowAchievement(false);
+    setCurrentAchievement(null);
   }, []);
+
+  // Handle filter changes and track genre exploration
+  const handleFiltersChange = useCallback(
+    (newFilters: typeof filters) => {
+      setFilters(newFilters);
+
+      // Track genre exploration for achievement
+      if (newFilters.genre) {
+        const achievement = trackGenreExplored(newFilters.genre);
+        if (achievement) {
+          showAchievementNotification(achievement);
+        }
+      }
+    },
+    [setFilters, trackGenreExplored, showAchievementNotification]
+  );
 
   if (loading) {
     return (
@@ -129,19 +181,29 @@ export default function App() {
 
   return (
     <div className="app">
-      <Carousel
-        books={books}
-        userWishlist={wishlist}
-        onBookSelected={handleBookSelected}
-        triggerSpin={triggerSpin}
-        onSpinStart={handleSpinStart}
-        onWishlist={handleWishlist}
-        onSpinAgain={handleSpinAgain}
-        onIgnore={handleIgnore}
-        onCoverClick={handleCoverClick}
-        selectedBookId={selectedBook?.id}
-        continuousSpin={showOnboarding}
-      />
+      <header className="header">
+        <FilterMenu
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          disabled={showOnboarding}
+        />
+      </header>
+
+      <main className="main">
+        <Carousel
+          books={filteredBooks}
+          userWishlist={wishlist}
+          onBookSelected={handleBookSelected}
+          triggerSpin={triggerSpin}
+          onSpinStart={handleSpinStart}
+          onWishlist={handleWishlist}
+          onSpinAgain={handleSpinAgain}
+          onIgnore={handleIgnore}
+          onCoverClick={handleCoverClick}
+          selectedBookId={selectedBook?.id}
+          continuousSpin={showOnboarding}
+        />
+      </main>
 
       <OnboardingDialog
         isOpen={showOnboarding}
@@ -152,9 +214,10 @@ export default function App() {
       />
 
       <AchievementNotification
-        title="ACHIEVEMENT UNLOCKED!"
-        subtitle="The Contrarian"
-        isVisible={showAchievement}
+        title={currentAchievement?.title ?? ''}
+        subtitle={currentAchievement?.subtitle ?? ''}
+        description={currentAchievement?.description}
+        isVisible={currentAchievement !== null}
         onDismiss={handleAchievementDismiss}
         duration={6000}
       />
