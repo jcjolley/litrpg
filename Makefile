@@ -1,6 +1,15 @@
 # Makefile for LitRPG project
 
-.PHONY: build-lambda build-ui deploy-ui deploy test clean
+.PHONY: build-lambda build-ui deploy-ui deploy test clean aws-login
+
+# Check AWS credentials and login if needed
+aws-login:
+	@if ! aws sts get-caller-identity > /dev/null 2>&1; then \
+		echo "AWS credentials expired or missing. Logging in..."; \
+		aws sso login; \
+	else \
+		echo "AWS credentials valid."; \
+	fi
 
 # Build native Lambda function for AWS deployment
 build-lambda:
@@ -11,7 +20,7 @@ build-ui:
 	cd ui && npm run build
 
 # Deploy UI to S3 and invalidate CloudFront cache
-deploy-ui:
+deploy-ui: aws-login
 	@echo "Deploying UI to S3..."
 	cd terraform/environments/dev && \
 		eval "$$(aws configure export-credentials --format env)" && \
@@ -21,7 +30,7 @@ deploy-ui:
 		aws cloudfront create-invalidation --distribution-id "$$DIST_ID" --paths "/*"
 
 # Apply Terraform infrastructure changes
-deploy-infra:
+deploy-infra: aws-login
 	cd terraform/environments/dev && \
 		eval "$$(aws configure export-credentials --format env)" && \
 		terraform apply -auto-approve
