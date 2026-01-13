@@ -244,7 +244,8 @@ class MigrateCommandTest {
             audibleAsin = "B0TEST123",
             rating = 4.5,
             numRatings = 100,
-            originalDescription = "A cultivation story about becoming powerful."
+            originalDescription = "A cultivation story about becoming powerful.",
+            narrator = "Test Narrator"
         )
 
         coEvery { mockSummarizer.summarize(any()) } returns SummarizationResult(

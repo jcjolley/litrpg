@@ -34,9 +34,21 @@ eval "$(aws configure export-credentials --format env)" && \
 eval "$(aws configure export-credentials --format env)" && \
   AWS_REGION=us-west-2 \
   ./gradlew :curator:run --args="add -y https://www.audible.com/pd/Book-Title-Audiobook/B0XXXXXXXX"
+```
 
-# Native build for Lambda
-./gradlew build -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true
+## Makefile Commands
+
+The project includes a Makefile for common tasks:
+
+```bash
+make build-lambda    # Build native Lambda for AWS (uses GraalVM in Docker)
+make build-ui        # Build UI for production
+make deploy-infra    # Apply Terraform infrastructure changes
+make deploy-ui       # Deploy UI to S3 and invalidate CloudFront
+make deploy          # Full deployment: build and deploy everything
+make test            # Run all tests
+make clean           # Clean build artifacts
+make dev             # Start local development environment
 ```
 
 ## Tech Stack
