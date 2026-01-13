@@ -22,7 +22,8 @@ fun main(args: Array<String>) {
             ExportCommand(),
             ImportCommand(),
             MigrateCommand(),
-            RefreshCommand()
+            RefreshCommand(),
+            StatsCommand()
         )
         .main(args)
 }
