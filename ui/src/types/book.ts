@@ -4,6 +4,7 @@ export interface Book {
   subtitle: string | null;
   author: string;
   authorUrl: string | null;
+  narrator: string | null;
   series: string | null;
   seriesPosition: number | null;
   length: string;

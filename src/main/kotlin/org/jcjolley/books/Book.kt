@@ -15,6 +15,8 @@ data class Book(
     @get:DynamoDbSecondaryPartitionKey(indexNames = ["author-index"])
     var author: String = "",
     var authorUrl: String? = null,
+    @get:DynamoDbSecondaryPartitionKey(indexNames = ["narrator-index"])
+    var narrator: String? = null,
     var series: String? = null,
     var seriesPosition: Int? = null,
     var length: String = "",

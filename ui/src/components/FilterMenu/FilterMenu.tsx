@@ -1,6 +1,17 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { BookFilters } from '../../api/books';
+import { getAuthors, getNarrators } from '../../api/books';
 import styles from './FilterMenu.module.css';
+
+// Debounce hook for search
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 // Filter options
 const GENRES = [
@@ -35,11 +46,52 @@ interface FilterMenuProps {
   disabled?: boolean;
 }
 
-type FilterRow = 'genre' | 'length' | 'popularity';
+type FilterRow = 'author' | 'narrator' | 'genre' | 'length' | 'popularity';
 
 export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeRow, setActiveRow] = useState<FilterRow>('genre');
+  const [authors, setAuthors] = useState<string[]>([]);
+  const [narrators, setNarrators] = useState<string[]>([]);
+  const [authorSearch, setAuthorSearch] = useState('');
+  const [narratorSearch, setNarratorSearch] = useState('');
+  const [isLoadingAuthors, setIsLoadingAuthors] = useState(false);
+  const [isLoadingNarrators, setIsLoadingNarrators] = useState(false);
+  const initialLoadDone = useRef({ authors: false, narrators: false });
+
+  // Debounce search terms (300ms delay)
+  const debouncedAuthorSearch = useDebounce(authorSearch, 300);
+  const debouncedNarratorSearch = useDebounce(narratorSearch, 300);
+
+  // Fetch authors when search changes or on initial load
+  useEffect(() => {
+    if (!isExpanded || activeRow !== 'author') return;
+    if (initialLoadDone.current.authors && !debouncedAuthorSearch) return;
+
+    setIsLoadingAuthors(true);
+    getAuthors(debouncedAuthorSearch || undefined)
+      .then(setAuthors)
+      .catch(console.error)
+      .finally(() => {
+        setIsLoadingAuthors(false);
+        if (!debouncedAuthorSearch) initialLoadDone.current.authors = true;
+      });
+  }, [isExpanded, activeRow, debouncedAuthorSearch]);
+
+  // Fetch narrators when search changes or on initial load
+  useEffect(() => {
+    if (!isExpanded || activeRow !== 'narrator') return;
+    if (initialLoadDone.current.narrators && !debouncedNarratorSearch) return;
+
+    setIsLoadingNarrators(true);
+    getNarrators(debouncedNarratorSearch || undefined)
+      .then(setNarrators)
+      .catch(console.error)
+      .finally(() => {
+        setIsLoadingNarrators(false);
+        if (!debouncedNarratorSearch) initialLoadDone.current.narrators = true;
+      });
+  }, [isExpanded, activeRow, debouncedNarratorSearch]);
 
   const toggleExpanded = useCallback(() => {
     setIsExpanded(prev => !prev);
@@ -76,11 +128,13 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
     return pop?.label || 'ANY';
   };
 
-  const hasActiveFilters = filters.genre || filters.length || filters.popularity;
+  const hasActiveFilters = filters.author || filters.narrator || filters.genre || filters.length || filters.popularity;
 
   // Build summary text
   const getSummaryText = () => {
     const parts: string[] = [];
+    if (filters.author) parts.push(filters.author);
+    if (filters.narrator) parts.push(filters.narrator);
     if (filters.genre) parts.push(getGenreLabel());
     if (filters.length) parts.push(getLengthLabel());
     if (filters.popularity) parts.push(getPopularityLabel());
@@ -110,6 +164,20 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
             {/* Left side: Filter categories */}
             <div className={styles.categories}>
               <button
+                className={`${styles.categoryRow} ${activeRow === 'author' ? styles.activeRow : ''}`}
+                onClick={() => handleRowClick('author')}
+              >
+                <span className={styles.cursor}>{activeRow === 'author' ? '\u25B6' : ' '}</span>
+                <span className={styles.categoryLabel}>AUTHOR</span>
+              </button>
+              <button
+                className={`${styles.categoryRow} ${activeRow === 'narrator' ? styles.activeRow : ''}`}
+                onClick={() => handleRowClick('narrator')}
+              >
+                <span className={styles.cursor}>{activeRow === 'narrator' ? '\u25B6' : ' '}</span>
+                <span className={styles.categoryLabel}>NARRATOR</span>
+              </button>
+              <button
                 className={`${styles.categoryRow} ${activeRow === 'genre' ? styles.activeRow : ''}`}
                 onClick={() => handleRowClick('genre')}
               >
@@ -137,6 +205,70 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
 
             {/* Right side: Options for selected category */}
             <div className={styles.options}>
+              {activeRow === 'author' && (
+                <div className={styles.searchContainer}>
+                  <input
+                    type="text"
+                    className={styles.searchInput}
+                    placeholder="Search authors..."
+                    value={authorSearch}
+                    onChange={(e) => setAuthorSearch(e.target.value)}
+                  />
+                  <div className={styles.optionsList}>
+                    <button
+                      className={`${styles.optionItem} ${!filters.author ? styles.selected : ''}`}
+                      onClick={() => handleFilterChange('author', '')}
+                    >
+                      ALL AUTHORS
+                    </button>
+                    {isLoadingAuthors ? (
+                      <span className={styles.loading}>Loading...</span>
+                    ) : (
+                      authors.map(author => (
+                        <button
+                          key={author}
+                          className={`${styles.optionItem} ${filters.author === author ? styles.selected : ''}`}
+                          onClick={() => handleFilterChange('author', author)}
+                        >
+                          {author}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+              {activeRow === 'narrator' && (
+                <div className={styles.searchContainer}>
+                  <input
+                    type="text"
+                    className={styles.searchInput}
+                    placeholder="Search narrators..."
+                    value={narratorSearch}
+                    onChange={(e) => setNarratorSearch(e.target.value)}
+                  />
+                  <div className={styles.optionsList}>
+                    <button
+                      className={`${styles.optionItem} ${!filters.narrator ? styles.selected : ''}`}
+                      onClick={() => handleFilterChange('narrator', '')}
+                    >
+                      ALL NARRATORS
+                    </button>
+                    {isLoadingNarrators ? (
+                      <span className={styles.loading}>Loading...</span>
+                    ) : (
+                      narrators.map(narrator => (
+                        <button
+                          key={narrator}
+                          className={`${styles.optionItem} ${filters.narrator === narrator ? styles.selected : ''}`}
+                          onClick={() => handleFilterChange('narrator', narrator)}
+                        >
+                          {narrator}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
               {activeRow === 'genre' && (
                 <div className={styles.optionsList}>
                   {GENRES.map(genre => (

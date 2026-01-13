@@ -191,6 +191,12 @@
   margin: var(--spacing-sm) 0 0;
 }
 
+.cardLargeNarrator {
+  font-size: 14px;
+  color: var(--ff-text-narrator);
+  margin: var(--spacing-xs) 0 0;
+}
+
 .cardLargeSeries {
   font-size: 14px;
   color: var(--ff-text-highlight);
@@ -392,6 +398,11 @@
 
   .cardLargeAuthor {
     font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .cardLargeNarrator {
+    font-size: 10px;
     flex-shrink: 0;
   }
 

@@ -53,6 +53,10 @@ export function SystemDialog({
 
             <p className={styles.author}>by {book.author}</p>
 
+            {book.narrator && (
+              <p className={styles.narrator}>narrated by {book.narrator}</p>
+            )}
+
             {book.series && (
               <p className={styles.series}>
                 {book.series}

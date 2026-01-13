@@ -59,6 +59,11 @@ class AudibleScraper {
             ?.firstOrNull()?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
             ?: "Unknown"
 
+        // Extract narrator(s) from JSON - comma-separated if multiple
+        val narrator = metadataJson?.get("narrators")?.jsonArray
+            ?.mapNotNull { it.jsonObject["name"]?.jsonPrimitive?.contentOrNull }
+            ?.joinToString(", ")
+
         // Extract rating from JSON
         val rating = metadataJson?.get("rating")?.jsonObject?.get("value")?.jsonPrimitive?.doubleOrNull ?: 0.0
         val numRatings = metadataJson?.get("rating")?.jsonObject?.get("count")?.jsonPrimitive?.intOrNull ?: 0
@@ -104,6 +109,7 @@ class AudibleScraper {
                 subtitle = subtitle?.trim(),
                 author = author.trim(),
                 authorUrl = null,
+                narrator = narrator?.trim()?.takeIf { it.isNotEmpty() },
                 series = series,
                 seriesPosition = seriesPosition,
                 length = duration,

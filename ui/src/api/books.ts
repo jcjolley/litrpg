@@ -2,6 +2,8 @@ import { fetchApi } from './client';
 import type { Book } from '../types/book';
 
 export interface BookFilters {
+  author?: string;
+  narrator?: string;
   genre?: string;
   length?: string;
   popularity?: string;
@@ -11,6 +13,8 @@ export interface BookFilters {
 export async function getBooks(filters?: BookFilters): Promise<Book[]> {
   const params = new URLSearchParams();
 
+  if (filters?.author) params.set('author', filters.author);
+  if (filters?.narrator) params.set('narrator', filters.narrator);
   if (filters?.genre) params.set('genre', filters.genre);
   if (filters?.length) params.set('length', filters.length);
   if (filters?.popularity) params.set('popularity', filters.popularity);
@@ -20,6 +24,20 @@ export async function getBooks(filters?: BookFilters): Promise<Book[]> {
   const url = queryString ? `/books?${queryString}` : '/books';
 
   return fetchApi<Book[]>(url);
+}
+
+export async function getAuthors(search?: string, limit = 20): Promise<string[]> {
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  params.set('limit', limit.toString());
+  return fetchApi<string[]>(`/books/authors?${params.toString()}`);
+}
+
+export async function getNarrators(search?: string, limit = 20): Promise<string[]> {
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  params.set('limit', limit.toString());
+  return fetchApi<string[]>(`/books/narrators?${params.toString()}`);
 }
 
 export async function recordImpression(bookId: string): Promise<void> {

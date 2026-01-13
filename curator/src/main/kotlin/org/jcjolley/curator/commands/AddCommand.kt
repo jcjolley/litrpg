@@ -93,6 +93,9 @@ class AddCommand : CliktCommand(name = "add") {
             echo(green("✓") + " Subtitle: ${scraped.subtitle}")
         }
         echo(green("✓") + " Author: ${scraped.author}")
+        if (scraped.narrator != null) {
+            echo(green("✓") + " Narrator: ${scraped.narrator}")
+        }
         if (scraped.series != null) {
             val position = scraped.seriesPosition?.let { ", Book $it" } ?: ""
             echo(green("✓") + " Series: ${scraped.series}$position")
@@ -173,6 +176,7 @@ class AddCommand : CliktCommand(name = "add") {
             subtitle = scraped.subtitle,
             author = scraped.author,
             authorUrl = scraped.authorUrl,
+            narrator = scraped.narrator,
             series = scraped.series,
             seriesPosition = scraped.seriesPosition,
             length = scraped.length,

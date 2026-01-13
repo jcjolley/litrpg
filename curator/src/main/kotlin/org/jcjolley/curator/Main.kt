@@ -21,7 +21,8 @@ fun main(args: Array<String>) {
             RemoveCommand(),
             ExportCommand(),
             ImportCommand(),
-            MigrateCommand()
+            MigrateCommand(),
+            RefreshCommand()
         )
         .main(args)
 }

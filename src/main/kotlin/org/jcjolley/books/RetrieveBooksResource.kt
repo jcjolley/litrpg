@@ -14,6 +14,7 @@ class RetrieveBooksResource(val booksService: BooksService) {
     @Produces(MediaType.APPLICATION_JSON)
     fun getBooks(
         @QueryParam("author") author: String?,
+        @QueryParam("narrator") narrator: String?,
         @QueryParam("genre") genre: String?,
         @QueryParam("popularity") popularity: String?,  // "popular" or "niche"
         @QueryParam("length") length: String?,          // "Short", "Medium", "Long", "Epic"
@@ -22,10 +23,31 @@ class RetrieveBooksResource(val booksService: BooksService) {
         // Use combined query - supports multiple filters
         return booksService.queryBooks(
             author = author,
+            narrator = narrator,
             genre = genre,
             popularity = popularity,
             length = length,
             limit = limit
         )
+    }
+
+    @GET
+    @Path("/authors")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun getAuthors(
+        @QueryParam("search") search: String?,
+        @QueryParam("limit") @DefaultValue("20") limit: Int
+    ): List<String> {
+        return booksService.getDistinctAuthors(search, limit)
+    }
+
+    @GET
+    @Path("/narrators")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun getNarrators(
+        @QueryParam("search") search: String?,
+        @QueryParam("limit") @DefaultValue("20") limit: Int
+    ): List<String> {
+        return booksService.getDistinctNarrators(search, limit)
     }
 }

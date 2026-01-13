@@ -15,6 +15,7 @@
 
   --ff-text-primary: #ffffff;
   --ff-text-secondary: #b0c0e0;
+  --ff-text-narrator: #e0c8b0;
   --ff-text-highlight: #f8e800;
   --ff-text-muted: #6080b0;
 
@@ -35,6 +36,7 @@
 
   --ff-text-primary: #fff8dc;
   --ff-text-secondary: #daa520;
+  --ff-text-narrator: #cd9370;
   --ff-text-highlight: #ffd700;
   --ff-text-muted: #8b7355;
 
@@ -55,6 +57,7 @@
 
   --ff-text-primary: #e0e0e0;
   --ff-text-secondary: #a0a0a0;
+  --ff-text-narrator: #b0a090;
   --ff-text-highlight: #ff4444;
   --ff-text-muted: #606060;
 
@@ -75,6 +78,7 @@
 
   --ff-text-primary: #e8f5e0;
   --ff-text-secondary: #98c890;
+  --ff-text-narrator: #c8a898;
   --ff-text-highlight: #ffb830;
   --ff-text-muted: #508850;
 
@@ -95,6 +99,7 @@
 
   --ff-text-primary: #ffe8e8;
   --ff-text-secondary: #d0a0a0;
+  --ff-text-narrator: #c0b0a0;
   --ff-text-highlight: #ffd700;
   --ff-text-muted: #885050;
 
@@ -115,6 +120,7 @@
 
   --ff-text-primary: #ffffff;
   --ff-text-secondary: #b0c0e0;
+  --ff-text-narrator: #e0c8b0;
   --ff-text-highlight: #f8e800;
   --ff-text-muted: #6080b0;
 

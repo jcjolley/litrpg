@@ -73,6 +73,7 @@ class BooksService(
      */
     fun queryBooks(
         author: String? = null,
+        narrator: String? = null,
         genre: String? = null,
         popularity: String? = null,  // "popular" or "niche"
         length: String? = null,       // "Short", "Medium", "Long", "Epic"
@@ -81,9 +82,10 @@ class BooksService(
         // Fetch more than limit to allow for in-memory filtering
         val fetchLimit = limit * 3
 
-        // Query using the most selective GSI (author/genre/length are more selective than popularity)
+        // Query using the most selective GSI (author/narrator/genre/length are more selective than popularity)
         val baseResults = when {
             author != null -> getBooksByAuthor(author, fetchLimit)
+            narrator != null -> getBooksByNarrator(narrator, fetchLimit)
             genre != null -> getBooksByGenre(genre, fetchLimit)
             length != null -> getBooksByLength(length, fetchLimit)
             popularity != null -> {
@@ -96,16 +98,18 @@ class BooksService(
         // Apply remaining filters in memory
         var filtered = baseResults.asSequence()
 
-        if (author != null && genre == null && length == null && popularity == null) {
-            // Author was the primary query, no additional filtering needed
+        val primaryQueryUsed = author != null || narrator != null
+        if (primaryQueryUsed && genre == null && length == null && popularity == null) {
+            // Author/narrator was the primary query, no additional filtering needed
         } else {
             if (author != null) filtered = filtered.filter { it.author == author }
+            if (narrator != null) filtered = filtered.filter { it.narrator == narrator }
             if (genre != null) filtered = filtered.filter { it.genre == genre }
             if (length != null) filtered = filtered.filter { it.lengthCategory == length }
         }
 
         // Apply popularity sorting if specified (and wasn't the primary query)
-        val result = if (popularity != null && author == null && genre == null && length == null) {
+        val result = if (popularity != null && author == null && narrator == null && genre == null && length == null) {
             // Popularity was primary query, already sorted
             filtered.toList()
         } else if (popularity != null) {
@@ -184,5 +188,64 @@ class BooksService(
                 .scanIndexForward(false)  // Descending by rating
                 .limit(limit)
         }.flatMap { it.items() }.toList()
+    }
+
+    /**
+     * Query books by narrator using GSI, sorted by rating descending
+     */
+    fun getBooksByNarrator(narrator: String, limit: Int = 20): List<Book> {
+        val index = bookTable.index("narrator-index")
+        val queryConditional = QueryConditional.keyEqualTo(
+            Key.builder().partitionValue(narrator).build()
+        )
+        return index.query { r ->
+            r.queryConditional(queryConditional)
+                .scanIndexForward(false)  // Descending by rating
+                .limit(limit)
+        }.flatMap { it.items() }.toList()
+    }
+
+    /**
+     * Get distinct authors from the catalog, optionally filtered by search term.
+     * Results are sorted with prefix matches first, then alphabetically.
+     */
+    fun getDistinctAuthors(search: String? = null, limit: Int = 20): List<String> {
+        val allAuthors = getBooks()
+            .map { it.author }
+            .filter { it.isNotBlank() }
+            .distinct()
+
+        return if (search.isNullOrBlank()) {
+            allAuthors.sorted().take(limit)
+        } else {
+            // Prioritize prefix matches over substring matches
+            val (prefixMatches, substringMatches) = allAuthors
+                .filter { it.contains(search, ignoreCase = true) }
+                .partition { it.startsWith(search, ignoreCase = true) }
+
+            (prefixMatches.sorted() + substringMatches.sorted()).take(limit)
+        }
+    }
+
+    /**
+     * Get distinct narrators from the catalog, optionally filtered by search term.
+     * Results are sorted with prefix matches first, then alphabetically.
+     */
+    fun getDistinctNarrators(search: String? = null, limit: Int = 20): List<String> {
+        val allNarrators = getBooks()
+            .mapNotNull { it.narrator }
+            .filter { it.isNotBlank() }
+            .distinct()
+
+        return if (search.isNullOrBlank()) {
+            allNarrators.sorted().take(limit)
+        } else {
+            // Prioritize prefix matches over substring matches
+            val (prefixMatches, substringMatches) = allNarrators
+                .filter { it.contains(search, ignoreCase = true) }
+                .partition { it.startsWith(search, ignoreCase = true) }
+
+            (prefixMatches.sorted() + substringMatches.sorted()).take(limit)
+        }
     }
 }

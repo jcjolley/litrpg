@@ -35,6 +35,10 @@ export function BookCard({
 
         <p className={styles.cardLargeAuthor}>by {book.author}</p>
 
+        {book.narrator && (
+          <p className={styles.cardLargeNarrator}>narrated by {book.narrator}</p>
+        )}
+
         {book.series && (
           <p className={styles.cardLargeSeries}>
             {book.series}

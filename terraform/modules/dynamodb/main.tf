@@ -40,6 +40,11 @@ resource "aws_dynamodb_table" "books" {
     type = "N"
   }
 
+  attribute {
+    name = "narrator"
+    type = "S"
+  }
+
   # GSI 1: Query by author, sorted by rating (descending)
   global_secondary_index {
     name            = "author-index"
@@ -69,6 +74,14 @@ resource "aws_dynamodb_table" "books" {
   global_secondary_index {
     name            = "length-index"
     hash_key        = "lengthCategory"
+    range_key       = "rating"
+    projection_type = "ALL"
+  }
+
+  # GSI 5: Query by narrator, sorted by rating (descending)
+  global_secondary_index {
+    name            = "narrator-index"
+    hash_key        = "narrator"
     range_key       = "rating"
     projection_type = "ALL"
   }
