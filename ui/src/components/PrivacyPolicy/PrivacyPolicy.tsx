@@ -38,7 +38,7 @@ export function PrivacyPolicy({ isOpen, onClose }: PrivacyPolicyProps) {
             </p>
             <ul className={styles.list}>
               <li>Impressions (which books are shown)</li>
-              <li>Clicks (which books you explore on Audible)</li>
+              <li>Clicks (which books you click through to Audible)</li>
               <li>Wishlist additions and removals</li>
             </ul>
             <p className={styles.text}>
