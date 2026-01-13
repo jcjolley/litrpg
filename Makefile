@@ -17,14 +17,14 @@ deploy-ui:
 		eval "$$(aws configure export-credentials --format env)" && \
 		BUCKET=$$(terraform output -raw frontend_bucket) && \
 		DIST_ID=$$(terraform output -raw cloudfront_distribution_id) && \
-		aws s3 sync ../../ui/dist "s3://$$BUCKET" --delete && \
+		aws s3 sync ../../../ui/dist "s3://$$BUCKET" --delete && \
 		aws cloudfront create-invalidation --distribution-id "$$DIST_ID" --paths "/*"
 
 # Apply Terraform infrastructure changes
 deploy-infra:
 	cd terraform/environments/dev && \
 		eval "$$(aws configure export-credentials --format env)" && \
-		terraform apply
+		terraform apply -auto-approve
 
 # Full deployment: build and deploy everything
 deploy: build-lambda build-ui deploy-infra deploy-ui
