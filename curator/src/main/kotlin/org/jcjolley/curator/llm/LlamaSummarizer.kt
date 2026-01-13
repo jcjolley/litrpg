@@ -7,13 +7,49 @@ import org.jcjolley.curator.model.BookFacts
 private val logger = KotlinLogging.logger {}
 
 /**
+ * Valid genres for LitRPG books - LLM must pick from this list
+ */
+val VALID_GENRES = setOf(
+    "Cultivation",
+    "System Apocalypse",
+    "Dungeon Core",
+    "GameLit",
+    "Isekai",
+    "Tower Climb",
+    "Progression Fantasy"
+)
+
+/**
+ * Valid subgenres for LitRPG books - LLM must pick from this list
+ */
+val VALID_SUBGENRES = setOf(
+    "Sect Politics",
+    "Monster Evolution",
+    "Base Building",
+    "Time Loop",
+    "Reincarnation",
+    "Academy",
+    "VR Game",
+    "Kingdom Building",
+    "Crafting",
+    "Adventurer Guild",
+    "Solo Leveling",
+    "Party Based",
+    "Portal Fantasy",
+    "Second Chance",
+    "Apocalypse Survival",
+    "Dungeon Diving"
+)
+
+/**
  * Two-pass LLM summarization for book descriptions.
  *
  * Pass 1: Extract structured facts from Audible's description
  * Pass 2: Generate an engaging 2-sentence blurb from the facts
  */
 class LlamaSummarizer(
-    private val ollamaClient: OllamaClient
+    private val ollamaClient: OllamaClient,
+    private val maxRetries: Int = 3
 ) {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -22,8 +58,12 @@ class LlamaSummarizer(
 
     /**
      * Pass 1: Extract structured facts from the raw description
+     * Retries up to maxRetries if genre/subgenre are invalid
      */
     suspend fun extractFacts(description: String): BookFacts {
+        val genreList = VALID_GENRES.joinToString(", ")
+        val subgenreList = VALID_SUBGENRES.joinToString(", ")
+
         val prompt = """
             |Extract the key story facts from this book description. Output valid JSON only.
             |
@@ -38,16 +78,41 @@ class LlamaSummarizer(
             |  "inciting_incident": "what forces them to act",
             |  "goal": "what they are trying to achieve",
             |  "tone": "dark humor / epic / gritty / lighthearted",
-            |  "genre": "Cultivation / System Apocalypse / Dungeon Crawl / GameLit / Isekai / Tower Climb / Progression Fantasy"
+            |  "genre": "<one of: $genreList>",
+            |  "subgenre": "<one of: $subgenreList>"
             |}
+            |
+            |IMPORTANT: For genre and subgenre, you MUST pick exactly one value from the provided lists.
             |
             |JSON:
         """.trimMargin()
 
-        val response = ollamaClient.generate(prompt)
-        logger.debug { "Pass 1 response: $response" }
+        repeat(maxRetries) { attempt ->
+            val response = ollamaClient.generate(prompt)
+            logger.debug { "Pass 1 response (attempt ${attempt + 1}): $response" }
 
-        return parseFacts(response)
+            val facts = parseFacts(response)
+            val validation = validateGenreSubgenre(facts)
+
+            if (validation.isValid) {
+                return facts
+            }
+
+            logger.warn { "Attempt ${attempt + 1}/$maxRetries failed validation: ${validation.issues.joinToString()}" }
+
+            if (attempt < maxRetries - 1) {
+                logger.info { "Retrying extraction..." }
+            }
+        }
+
+        // Final attempt failed - throw exception
+        val lastFacts = parseFacts(ollamaClient.generate(prompt))
+        val validation = validateGenreSubgenre(lastFacts)
+        throw InvalidGenreException(
+            "Failed to extract valid genre/subgenre after $maxRetries attempts. " +
+            "Issues: ${validation.issues.joinToString()}. " +
+            "Got genre='${lastFacts.genre}', subgenre='${lastFacts.subgenre}'"
+        )
     }
 
     /**
@@ -90,10 +155,10 @@ class LlamaSummarizer(
     suspend fun summarize(description: String): SummarizationResult {
         logger.info { "Starting two-pass summarization..." }
 
-        // Pass 1: Extract facts
+        // Pass 1: Extract facts (with validation and retry)
         logger.info { "Pass 1: Extracting facts..." }
         val facts = extractFacts(description)
-        logger.info { "Extracted: protagonist=${facts.protagonist}, genre=${facts.genre}" }
+        logger.info { "Extracted: protagonist=${facts.protagonist}, genre=${facts.genre}, subgenre=${facts.subgenre}" }
 
         // Pass 2: Generate blurb
         logger.info { "Pass 2: Generating blurb..." }
@@ -114,7 +179,7 @@ class LlamaSummarizer(
 
         if (jsonStart == -1 || jsonEnd == -1) {
             logger.warn { "Could not find JSON in response, returning empty facts" }
-            return BookFacts(null, null, null, null, null, null, null)
+            return BookFacts(null, null, null, null, null, null, null, null)
         }
 
         val jsonStr = response.substring(jsonStart, jsonEnd + 1)
@@ -125,8 +190,26 @@ class LlamaSummarizer(
             json.decodeFromString<BookFacts>(jsonStr)
         } catch (e: Exception) {
             logger.warn(e) { "Failed to parse facts JSON: $jsonStr" }
-            BookFacts(null, null, null, null, null, null, null)
+            BookFacts(null, null, null, null, null, null, null, null)
         }
+    }
+
+    private fun validateGenreSubgenre(facts: BookFacts): GenreValidationResult {
+        val issues = mutableListOf<String>()
+
+        if (facts.genre == null) {
+            issues.add("Genre is null")
+        } else if (facts.genre !in VALID_GENRES) {
+            issues.add("Invalid genre '${facts.genre}' - must be one of: ${VALID_GENRES.joinToString()}")
+        }
+
+        if (facts.subgenre == null) {
+            issues.add("Subgenre is null")
+        } else if (facts.subgenre !in VALID_SUBGENRES) {
+            issues.add("Invalid subgenre '${facts.subgenre}' - must be one of: ${VALID_SUBGENRES.joinToString()}")
+        }
+
+        return GenreValidationResult(issues.isEmpty(), issues)
     }
 
     private fun cleanBlurb(response: String, genre: String): String {
@@ -151,6 +234,13 @@ class LlamaSummarizer(
     }
 }
 
+data class GenreValidationResult(
+    val isValid: Boolean,
+    val issues: List<String>
+)
+
+class InvalidGenreException(message: String) : Exception(message)
+
 data class SummarizationResult(
     val facts: BookFacts,
     val blurb: String,
@@ -159,7 +249,9 @@ data class SummarizationResult(
     fun isValid(): Boolean {
         return wordCount in 30..70 &&
             !blurb.contains("?") &&
-            facts.protagonist != null
+            facts.protagonist != null &&
+            facts.genre in VALID_GENRES &&
+            facts.subgenre in VALID_SUBGENRES
     }
 
     fun validationIssues(): List<String> {
@@ -168,6 +260,12 @@ data class SummarizationResult(
         if (wordCount > 70) issues.add("Too long ($wordCount words, maximum 70)")
         if (blurb.contains("?")) issues.add("Contains a question")
         if (facts.protagonist == null) issues.add("No protagonist extracted")
+        if (facts.genre == null || facts.genre !in VALID_GENRES) {
+            issues.add("Invalid genre: ${facts.genre}")
+        }
+        if (facts.subgenre == null || facts.subgenre !in VALID_SUBGENRES) {
+            issues.add("Invalid subgenre: ${facts.subgenre}")
+        }
         return issues
     }
 }

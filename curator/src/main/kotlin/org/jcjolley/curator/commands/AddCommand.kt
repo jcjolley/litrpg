@@ -10,9 +10,11 @@ import org.jcjolley.curator.llm.LlamaSummarizer
 import org.jcjolley.curator.llm.OllamaClient
 import org.jcjolley.curator.llm.SummarizationResult
 import org.jcjolley.curator.model.Book
+import org.jcjolley.curator.model.BookFacts
 import org.jcjolley.curator.model.ScrapedBook
 import org.jcjolley.curator.repository.BookRepository
 import org.jcjolley.curator.scraper.AudibleScraper
+import org.jcjolley.curator.util.LengthParser
 import java.time.Instant
 import java.util.*
 
@@ -64,12 +66,15 @@ class AddCommand : CliktCommand(name = "add") {
 
             // Step 3: Interactive review (if enabled and not auto-accept)
             var finalDescription = result.blurb
+            var finalFacts = result.facts
             if (interactive && !autoAccept) {
-                finalDescription = interactiveReview(result, summarizer, scraped.originalDescription)
+                val reviewResult = interactiveReviewWithFacts(result, summarizer, scraped.originalDescription)
+                finalDescription = reviewResult.first
+                finalFacts = reviewResult.second
             }
 
             // Step 4: Create and save book
-            val book = createBook(scraped, finalDescription)
+            val book = createBook(scraped, finalDescription, finalFacts)
             repository.save(book)
 
             echo("")
@@ -110,11 +115,11 @@ class AddCommand : CliktCommand(name = "add") {
         }
     }
 
-    private suspend fun interactiveReview(
+    private suspend fun interactiveReviewWithFacts(
         initialResult: SummarizationResult,
         summarizer: LlamaSummarizer,
         originalDescription: String
-    ): String {
+    ): Pair<String, BookFacts> {
         var currentResult = initialResult
         var currentDescription = currentResult.blurb
 
@@ -125,7 +130,7 @@ class AddCommand : CliktCommand(name = "add") {
 
             when (input) {
                 "a", "accept" -> {
-                    return currentDescription
+                    return Pair(currentDescription, currentResult.facts)
                 }
                 "e", "edit" -> {
                     echo("Enter new description (or press Enter to keep current):")
@@ -157,8 +162,11 @@ class AddCommand : CliktCommand(name = "add") {
         }
     }
 
-    private fun createBook(scraped: ScrapedBook, description: String): Book {
+    private fun createBook(scraped: ScrapedBook, description: String, facts: BookFacts): Book {
         val now = Instant.now()
+        val lengthMinutes = LengthParser.parseToMinutes(scraped.length)
+        val lengthCategory = LengthParser.computeCategory(lengthMinutes)
+
         return Book(
             id = UUID.randomUUID().toString(),
             title = scraped.title,
@@ -176,6 +184,10 @@ class AddCommand : CliktCommand(name = "add") {
             rating = scraped.rating,
             numRatings = scraped.numRatings,
             description = description,
+            // GSI filter fields
+            subgenre = facts.subgenre ?: facts.genre,  // Fall back to genre if no subgenre
+            lengthMinutes = lengthMinutes,
+            lengthCategory = lengthCategory,
             addedAt = now,
             updatedAt = now
         )

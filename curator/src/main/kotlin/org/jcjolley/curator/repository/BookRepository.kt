@@ -164,6 +164,11 @@ data class BookEntity(
     var clickThroughCount: Int = 0,
     var notInterestedCount: Int = 0,
     var impressionCount: Int = 0,
+    // GSI filter fields
+    var subgenre: String? = null,
+    var lengthMinutes: Int? = null,
+    var lengthCategory: String? = null,
+    var gsiPartition: String = "BOOK",
     var addedAt: Long = 0,  // epoch millis
     var updatedAt: Long = 0  // epoch millis
 )
@@ -190,6 +195,10 @@ fun Book.toEntity() = BookEntity(
     clickThroughCount = clickThroughCount,
     notInterestedCount = notInterestedCount,
     impressionCount = impressionCount,
+    subgenre = subgenre,
+    lengthMinutes = lengthMinutes,
+    lengthCategory = lengthCategory,
+    gsiPartition = gsiPartition,
     addedAt = addedAt.toEpochMilli(),
     updatedAt = updatedAt.toEpochMilli()
 )
@@ -215,6 +224,10 @@ fun BookEntity.toBook() = Book(
     clickThroughCount = clickThroughCount,
     notInterestedCount = notInterestedCount,
     impressionCount = impressionCount,
+    subgenre = subgenre,
+    lengthMinutes = lengthMinutes,
+    lengthCategory = lengthCategory,
+    gsiPartition = gsiPartition,
     addedAt = Instant.ofEpochMilli(addedAt),
     updatedAt = Instant.ofEpochMilli(updatedAt)
 )

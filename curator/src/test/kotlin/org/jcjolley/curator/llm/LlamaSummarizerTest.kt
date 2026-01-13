@@ -23,7 +23,8 @@ class LlamaSummarizerTest {
               "inciting_incident": "The System arrives",
               "goal": "Survive and find family",
               "tone": "gritty",
-              "genre": "System Apocalypse"
+              "genre": "System Apocalypse",
+              "subgenre": "Apocalypse Survival"
             }
         """.trimIndent()
 
@@ -32,6 +33,7 @@ class LlamaSummarizerTest {
         expectThat(facts.protagonist).isEqualTo("Zac")
         expectThat(facts.setting).isEqualTo("Earth transformed by the System")
         expectThat(facts.genre).isEqualTo("System Apocalypse")
+        expectThat(facts.subgenre).isEqualTo("Apocalypse Survival")
         expectThat(facts.tone).isEqualTo("gritty")
     }
 
@@ -47,7 +49,8 @@ class LlamaSummarizerTest {
               "inciting_incident": "Earth collapses",
               "goal": "Survive with cat",
               "tone": "dark humor",
-              "genre": "Dungeon Crawl"
+              "genre": "Dungeon Core",
+              "subgenre": "Dungeon Diving"
             }
 
             Hope this helps!
@@ -56,17 +59,18 @@ class LlamaSummarizerTest {
         val facts = summarizer.extractFacts("Some description")
 
         expectThat(facts.protagonist).isEqualTo("Carl")
-        expectThat(facts.genre).isEqualTo("Dungeon Crawl")
+        expectThat(facts.genre).isEqualTo("Dungeon Core")
+        expectThat(facts.subgenre).isEqualTo("Dungeon Diving")
     }
 
     @Test
-    fun `extractFacts returns empty facts on invalid JSON`() = runTest {
+    fun `extractFacts throws exception on invalid JSON after retries`() = runTest {
         coEvery { mockOllamaClient.generate(any()) } returns "This is not JSON at all"
 
-        val facts = summarizer.extractFacts("Some description")
+        val exception = runCatching { summarizer.extractFacts("Some description") }
+            .exceptionOrNull()
 
-        expectThat(facts.protagonist).isNull()
-        expectThat(facts.genre).isNull()
+        expectThat(exception).isNotNull().isA<InvalidGenreException>()
     }
 
     @Test
@@ -121,7 +125,8 @@ class LlamaSummarizerTest {
               "inciting_incident": "Vision of destruction",
               "goal": "Get stronger, save home",
               "tone": "epic",
-              "genre": "Cultivation"
+              "genre": "Cultivation",
+              "subgenre": "Sect Politics"
             }
         """.trimIndent()
 
@@ -133,6 +138,7 @@ class LlamaSummarizerTest {
 
         expectThat(result.facts.protagonist).isEqualTo("Lindon")
         expectThat(result.facts.genre).isEqualTo("Cultivation")
+        expectThat(result.facts.subgenre).isEqualTo("Sect Politics")
         expectThat(result.blurb).contains("Lindon")
         expectThat(result.blurb).contains("Cultivation")
     }
@@ -140,7 +146,7 @@ class LlamaSummarizerTest {
     @Test
     fun `SummarizationResult validates correctly`() {
         val validResult = SummarizationResult(
-            facts = BookFacts("Zac", "Earth", "problem", "incident", "goal", "gritty", "System Apocalypse"),
+            facts = BookFacts("Zac", "Earth", "problem", "incident", "goal", "gritty", "System Apocalypse", "Apocalypse Survival"),
             blurb = "When the System arrives Zac must survive alone in a dangerous new world filled with monsters and demons. He fights to find his family. System Apocalypse.",
             wordCount = 28
         )
@@ -159,7 +165,7 @@ class LlamaSummarizerTest {
     @Test
     fun `SummarizationResult detects question in blurb`() {
         val result = SummarizationResult(
-            facts = BookFacts("Zac", "Earth", "problem", "incident", "goal", "gritty", "System Apocalypse"),
+            facts = BookFacts("Zac", "Earth", "problem", "incident", "goal", "gritty", "System Apocalypse", "Apocalypse Survival"),
             blurb = "When the System arrives, Zac faces impossible odds. Can he survive long enough to find his family? System Apocalypse.",
             wordCount = 20
         )

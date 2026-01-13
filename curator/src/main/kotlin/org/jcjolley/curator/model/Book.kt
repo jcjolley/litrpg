@@ -33,6 +33,12 @@ data class Book(
     val notInterestedCount: Int = 0,
     val impressionCount: Int = 0,
 
+    // Filter/GSI fields
+    val subgenre: String? = null,           // e.g., "Cultivation", "System Apocalypse"
+    val lengthMinutes: Int? = null,         // Parsed from length string
+    val lengthCategory: String? = null,     // Short/Medium/Long/Epic
+    val gsiPartition: String = "BOOK",      // Fixed partition key for popularity GSI
+
     // Metadata (serialized as epoch millis)
     @Serializable(with = InstantSerializer::class)
     val addedAt: Instant = Instant.now(),
@@ -73,5 +79,6 @@ data class BookFacts(
     val incitingIncident: String?,
     val goal: String?,
     val tone: String?,
-    val genre: String?
+    val genre: String?,
+    val subgenre: String? = null            // More specific than genre
 )

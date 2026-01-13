@@ -1,0 +1,125 @@
+package org.jcjolley.curator.commands
+
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
+import kotlinx.coroutines.runBlocking
+import org.jcjolley.curator.llm.LlamaSummarizer
+import org.jcjolley.curator.llm.OllamaClient
+import org.jcjolley.curator.repository.BookRepository
+import org.jcjolley.curator.scraper.AudibleScraper
+import org.jcjolley.curator.util.LengthParser
+import java.time.Instant
+
+class MigrateCommand : CliktCommand(name = "migrate") {
+    override fun help(context: com.github.ajalt.clikt.core.Context) =
+        "Migrate existing books to add new filter fields (subgenre, length)"
+
+    private val dryRun by option("--dry-run", help = "Preview changes without saving")
+        .flag(default = false)
+
+    private val skipLlm by option("--skip-llm", help = "Only update length fields, skip LLM re-extraction")
+        .flag(default = false)
+
+    private val dynamoEndpoint by option("--dynamo", help = "DynamoDB endpoint")
+
+    private val ollamaEndpoint by option("--ollama", help = "Ollama endpoint URL")
+        .default("http://localhost:11434")
+
+    private val ollamaModel by option("--model", help = "Ollama model to use")
+        .default("llama3.2:latest")
+
+    override fun run() = runBlocking {
+        val repository = BookRepository(dynamoEndpoint)
+        val scraper = if (!skipLlm) AudibleScraper() else null
+        val summarizer = if (!skipLlm) {
+            LlamaSummarizer(OllamaClient(ollamaEndpoint, ollamaModel))
+        } else null
+
+        try {
+            val books = repository.findAll()
+            echo("Found ${books.size} books to migrate")
+            echo("")
+
+            var updated = 0
+            var skipped = 0
+            var failed = 0
+
+            for (book in books) {
+                // Skip if already fully migrated (has all new fields)
+                if (book.lengthMinutes != null && book.lengthCategory != null && book.subgenre != null) {
+                    echo("${yellow("⊘")} Skipping ${book.title} (already migrated)")
+                    skipped++
+                    continue
+                }
+
+                echo("Processing: ${book.title}")
+
+                // Always compute length fields from existing length string
+                val lengthMinutes = LengthParser.parseToMinutes(book.length)
+                val lengthCategory = LengthParser.computeCategory(lengthMinutes)
+
+                var subgenre = book.subgenre
+
+                // Re-extract via LLM if needed and not skipping
+                if (!skipLlm && scraper != null && summarizer != null && subgenre == null) {
+                    try {
+                        echo("  Fetching from Audible...")
+                        val scraped = scraper.scrapeBook(book.audibleUrl)
+                        echo("  Extracting facts via LLM...")
+                        val result = summarizer.summarize(scraped.originalDescription)
+                        subgenre = result.facts.subgenre ?: result.facts.genre
+                        echo("  ${green("✓")} Extracted: subgenre=$subgenre")
+                    } catch (e: Exception) {
+                        echo("  ${yellow("⚠")} LLM extraction failed: ${e.message}")
+                    }
+                }
+
+                val updatedBook = book.copy(
+                    lengthMinutes = lengthMinutes,
+                    lengthCategory = lengthCategory,
+                    subgenre = subgenre,
+                    updatedAt = Instant.now()
+                )
+
+                if (!dryRun) {
+                    try {
+                        repository.save(updatedBook)
+                        echo("  ${green("✓")} Updated: $lengthCategory ($lengthMinutes min), subgenre=$subgenre")
+                        updated++
+                    } catch (e: Exception) {
+                        echo("  ${red("✗")} Failed to save: ${e.message}")
+                        failed++
+                    }
+                } else {
+                    echo("  ${blue("[DRY RUN]")} Would update: $lengthCategory ($lengthMinutes min), subgenre=$subgenre")
+                    updated++
+                }
+                echo("")
+            }
+
+            echo("─".repeat(50))
+            echo("Migration complete:")
+            echo("  ${green("✓")} Updated: $updated")
+            echo("  ${yellow("⊘")} Skipped: $skipped")
+            if (failed > 0) {
+                echo("  ${red("✗")} Failed: $failed")
+            }
+            if (dryRun) {
+                echo("")
+                echo("${yellow("Note:")} This was a dry run. No changes were saved.")
+                echo("Run without --dry-run to apply changes.")
+            }
+        } finally {
+            repository.close()
+            scraper?.close()
+        }
+    }
+
+    // ANSI color helpers
+    private fun green(text: String) = "\u001B[32m$text\u001B[0m"
+    private fun yellow(text: String) = "\u001B[33m$text\u001B[0m"
+    private fun red(text: String) = "\u001B[31m$text\u001B[0m"
+    private fun blue(text: String) = "\u001B[34m$text\u001B[0m"
+}

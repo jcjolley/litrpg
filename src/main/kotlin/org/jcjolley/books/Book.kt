@@ -1,13 +1,37 @@
 package org.jcjolley.books
 
-data class Book (
-    val title: String = "",
-    val author: String = "",
-    val series: String = "",
-    val length: String = "",
-    val releaseDate: String = "",
-    val language: String = "",
-    val description: String = "",
-    val imageUrl: String = "",
-    val bookUrl: String = ""
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey
+import java.time.Instant
+
+@DynamoDbBean
+data class Book(
+    @get:DynamoDbPartitionKey
+    var id: String = "",
+    var title: String = "",
+    var subtitle: String? = null,
+    var author: String = "",
+    var authorUrl: String? = null,
+    var series: String? = null,
+    var seriesPosition: Int? = null,
+    var length: String = "",
+    var releaseDate: String = "",
+    var language: String = "English",
+    var imageUrl: String = "",
+    var audibleUrl: String = "",
+    var audibleAsin: String = "",
+    var rating: Double = 0.0,
+    var numRatings: Int = 0,
+    var description: String = "",
+    var wishlistCount: Int = 0,
+    var clickThroughCount: Int = 0,
+    var notInterestedCount: Int = 0,
+    var impressionCount: Int = 0,
+    // GSI filter fields
+    var subgenre: String? = null,
+    var lengthMinutes: Int? = null,
+    var lengthCategory: String? = null,
+    var gsiPartition: String = "BOOK",
+    var addedAt: Long = Instant.now().toEpochMilli(),
+    var updatedAt: Long = Instant.now().toEpochMilli()
 )
