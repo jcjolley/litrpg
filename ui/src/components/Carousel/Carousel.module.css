@@ -343,13 +343,14 @@
     /* Responsive width based on viewport */
     width: 92vw;
     max-width: 420px;
-    /* Fill space between header (50px) and action bar (90px) */
-    max-height: calc(100vh - 180px);
+    /* Fill space between header (60px) and action bar (120px) */
+    max-height: calc(100vh - 200px);
     /* Center the card */
     margin-left: -46vw;
     margin-top: calc(-50% + 40px);
     display: flex;
     flex-direction: column;
+    margin-bottom: 120px;
   }
 
   .cardLargeBody {
@@ -357,7 +358,7 @@
     gap: var(--spacing-sm);
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .cardLargeContent {
@@ -365,7 +366,7 @@
     align-items: center;
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
     display: flex;
     flex-direction: column;
   }
