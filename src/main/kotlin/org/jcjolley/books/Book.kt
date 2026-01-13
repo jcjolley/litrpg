@@ -25,7 +25,7 @@ data class Book(
     var audibleAsin: String = "",
     @get:DynamoDbSecondarySortKey(indexNames = ["author-index", "length-index"])
     var rating: Double = 0.0,
-    @get:DynamoDbSecondarySortKey(indexNames = ["subgenre-index", "popularity-index"])
+    @get:DynamoDbSecondarySortKey(indexNames = ["genre-index", "popularity-index"])
     var numRatings: Int = 0,
     var description: String = "",
     var wishlistCount: Int = 0,
@@ -33,8 +33,8 @@ data class Book(
     var notInterestedCount: Int = 0,
     var impressionCount: Int = 0,
     // GSI filter fields
-    @get:DynamoDbSecondaryPartitionKey(indexNames = ["subgenre-index"])
-    var subgenre: String? = null,
+    @get:DynamoDbSecondaryPartitionKey(indexNames = ["genre-index"])
+    var genre: String? = null,
     var lengthMinutes: Int? = null,
     @get:DynamoDbSecondaryPartitionKey(indexNames = ["length-index"])
     var lengthCategory: String? = null,

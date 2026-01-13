@@ -14,21 +14,18 @@ class RetrieveBooksResource(val booksService: BooksService) {
     @Produces(MediaType.APPLICATION_JSON)
     fun getBooks(
         @QueryParam("author") author: String?,
-        @QueryParam("subgenre") subgenre: String?,
+        @QueryParam("genre") genre: String?,
         @QueryParam("popularity") popularity: String?,  // "popular" or "niche"
         @QueryParam("length") length: String?,          // "Short", "Medium", "Long", "Epic"
         @QueryParam("limit") @DefaultValue("50") limit: Int
     ): List<Book> {
-        // Use first non-null filter parameter, with priority order
-        return when {
-            author != null -> booksService.getBooksByAuthor(author, limit)
-            subgenre != null -> booksService.getBooksBySubgenre(subgenre, limit)
-            popularity != null -> {
-                val isPopular = popularity.equals("popular", ignoreCase = true)
-                booksService.getBooksByPopularity(isPopular, limit)
-            }
-            length != null -> booksService.getBooksByLength(length, limit)
-            else -> booksService.getBooks().take(limit)  // Fallback to full scan with limit
-        }
+        // Use combined query - supports multiple filters
+        return booksService.queryBooks(
+            author = author,
+            genre = genre,
+            popularity = popularity,
+            length = length,
+            limit = limit
+        )
     }
 }

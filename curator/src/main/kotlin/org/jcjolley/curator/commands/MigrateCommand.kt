@@ -48,7 +48,7 @@ class MigrateCommand : CliktCommand(name = "migrate") {
 
             for (book in books) {
                 // Skip if already fully migrated (has all new fields)
-                if (book.lengthMinutes != null && book.lengthCategory != null && book.subgenre != null) {
+                if (book.lengthMinutes != null && book.lengthCategory != null && book.genre != null) {
                     echo("${yellow("⊘")} Skipping ${book.title} (already migrated)")
                     skipped++
                     continue
@@ -60,17 +60,17 @@ class MigrateCommand : CliktCommand(name = "migrate") {
                 val lengthMinutes = LengthParser.parseToMinutes(book.length)
                 val lengthCategory = LengthParser.computeCategory(lengthMinutes)
 
-                var subgenre = book.subgenre
+                var genre = book.genre
 
                 // Re-extract via LLM if needed and not skipping
-                if (!skipLlm && scraper != null && summarizer != null && subgenre == null) {
+                if (!skipLlm && scraper != null && summarizer != null && genre == null) {
                     try {
                         echo("  Fetching from Audible...")
                         val scraped = scraper.scrapeBook(book.audibleUrl)
                         echo("  Extracting facts via LLM...")
                         val result = summarizer.summarize(scraped.originalDescription)
-                        subgenre = result.facts.subgenre ?: result.facts.genre
-                        echo("  ${green("✓")} Extracted: subgenre=$subgenre")
+                        genre = result.facts.genre
+                        echo("  ${green("✓")} Extracted: genre=$genre")
                     } catch (e: Exception) {
                         echo("  ${yellow("⚠")} LLM extraction failed: ${e.message}")
                     }
@@ -79,21 +79,21 @@ class MigrateCommand : CliktCommand(name = "migrate") {
                 val updatedBook = book.copy(
                     lengthMinutes = lengthMinutes,
                     lengthCategory = lengthCategory,
-                    subgenre = subgenre,
+                    genre = genre,
                     updatedAt = Instant.now()
                 )
 
                 if (!dryRun) {
                     try {
                         repository.save(updatedBook)
-                        echo("  ${green("✓")} Updated: $lengthCategory ($lengthMinutes min), subgenre=$subgenre")
+                        echo("  ${green("✓")} Updated: $lengthCategory ($lengthMinutes min), genre=$genre")
                         updated++
                     } catch (e: Exception) {
                         echo("  ${red("✗")} Failed to save: ${e.message}")
                         failed++
                     }
                 } else {
-                    echo("  ${blue("[DRY RUN]")} Would update: $lengthCategory ($lengthMinutes min), subgenre=$subgenre")
+                    echo("  ${blue("[DRY RUN]")} Would update: $lengthCategory ($lengthMinutes min), genre=$genre")
                     updated++
                 }
                 echo("")

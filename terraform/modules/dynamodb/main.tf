@@ -16,7 +16,7 @@ resource "aws_dynamodb_table" "books" {
   }
 
   attribute {
-    name = "subgenre"
+    name = "genre"
     type = "S"
   }
 
@@ -48,10 +48,10 @@ resource "aws_dynamodb_table" "books" {
     projection_type = "ALL"
   }
 
-  # GSI 2: Query by subgenre, sorted by numRatings (popularity)
+  # GSI 2: Query by genre, sorted by numRatings (popularity)
   global_secondary_index {
-    name            = "subgenre-index"
-    hash_key        = "subgenre"
+    name            = "genre-index"
+    hash_key        = "genre"
     range_key       = "numRatings"
     projection_type = "ALL"
   }

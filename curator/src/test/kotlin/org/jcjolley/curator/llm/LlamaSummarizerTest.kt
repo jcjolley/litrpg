@@ -23,8 +23,7 @@ class LlamaSummarizerTest {
               "inciting_incident": "The System arrives",
               "goal": "Survive and find family",
               "tone": "gritty",
-              "genre": "System Apocalypse",
-              "subgenre": "Apocalypse Survival"
+              "genre": "System Apocalypse"
             }
         """.trimIndent()
 
@@ -33,7 +32,6 @@ class LlamaSummarizerTest {
         expectThat(facts.protagonist).isEqualTo("Zac")
         expectThat(facts.setting).isEqualTo("Earth transformed by the System")
         expectThat(facts.genre).isEqualTo("System Apocalypse")
-        expectThat(facts.subgenre).isEqualTo("Apocalypse Survival")
         expectThat(facts.tone).isEqualTo("gritty")
     }
 
@@ -49,8 +47,7 @@ class LlamaSummarizerTest {
               "inciting_incident": "Earth collapses",
               "goal": "Survive with cat",
               "tone": "dark humor",
-              "genre": "Dungeon Core",
-              "subgenre": "Dungeon Diving"
+              "genre": "Dungeon Core"
             }
 
             Hope this helps!
@@ -60,7 +57,6 @@ class LlamaSummarizerTest {
 
         expectThat(facts.protagonist).isEqualTo("Carl")
         expectThat(facts.genre).isEqualTo("Dungeon Core")
-        expectThat(facts.subgenre).isEqualTo("Dungeon Diving")
     }
 
     @Test
@@ -125,8 +121,7 @@ class LlamaSummarizerTest {
               "inciting_incident": "Vision of destruction",
               "goal": "Get stronger, save home",
               "tone": "epic",
-              "genre": "Cultivation",
-              "subgenre": "Sect Politics"
+              "genre": "Cultivation"
             }
         """.trimIndent()
 
@@ -138,7 +133,6 @@ class LlamaSummarizerTest {
 
         expectThat(result.facts.protagonist).isEqualTo("Lindon")
         expectThat(result.facts.genre).isEqualTo("Cultivation")
-        expectThat(result.facts.subgenre).isEqualTo("Sect Politics")
         expectThat(result.blurb).contains("Lindon")
         expectThat(result.blurb).contains("Cultivation")
     }
@@ -146,7 +140,7 @@ class LlamaSummarizerTest {
     @Test
     fun `SummarizationResult validates correctly`() {
         val validResult = SummarizationResult(
-            facts = BookFacts("Zac", "Earth", "problem", "incident", "goal", "gritty", "System Apocalypse", "Apocalypse Survival"),
+            facts = BookFacts("Zac", "Earth", "problem", "incident", "goal", "gritty", "System Apocalypse"),
             blurb = "When the System arrives Zac must survive alone in a dangerous new world filled with monsters and demons. He fights to find his family. System Apocalypse.",
             wordCount = 28
         )
@@ -165,7 +159,7 @@ class LlamaSummarizerTest {
     @Test
     fun `SummarizationResult detects question in blurb`() {
         val result = SummarizationResult(
-            facts = BookFacts("Zac", "Earth", "problem", "incident", "goal", "gritty", "System Apocalypse", "Apocalypse Survival"),
+            facts = BookFacts("Zac", "Earth", "problem", "incident", "goal", "gritty", "System Apocalypse"),
             blurb = "When the System arrives, Zac faces impossible odds. Can he survive long enough to find his family? System Apocalypse.",
             wordCount = 20
         )

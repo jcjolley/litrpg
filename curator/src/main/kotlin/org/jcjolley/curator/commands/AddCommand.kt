@@ -185,7 +185,7 @@ class AddCommand : CliktCommand(name = "add") {
             numRatings = scraped.numRatings,
             description = description,
             // GSI filter fields
-            subgenre = facts.subgenre ?: facts.genre,  // Fall back to genre if no subgenre
+            genre = facts.genre,
             lengthMinutes = lengthMinutes,
             lengthCategory = lengthCategory,
             addedAt = now,
