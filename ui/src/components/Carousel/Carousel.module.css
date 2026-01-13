@@ -335,19 +335,19 @@
 /* Mobile styles */
 @media (max-width: 768px) {
   .viewport {
-    /* Shift the wheel center up to better center card in available space */
-    transform: translateY(-12%);
+    /* Shift wheel center up - use calc with fixed header offset */
+    transform: translateY(calc(-50% + 60px));
   }
 
   .cardLarge {
     /* Responsive width based on viewport */
     width: 92vw;
     max-width: 420px;
-    /* Use more of available height - header ~50px, action bar ~160px */
-    max-height: calc(100vh - 220px);
+    /* Fill space between header (50px) and action bar (90px) */
+    max-height: calc(100vh - 180px);
     /* Center the card */
     margin-left: -46vw;
-    margin-top: -28vh;
+    margin-top: calc(-50% + 40px);
     display: flex;
     flex-direction: column;
   }
@@ -421,7 +421,8 @@
     left: var(--spacing-sm);
     right: var(--spacing-sm);
     transform: none;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: nowrap;
     padding: var(--spacing-sm);
     gap: var(--spacing-xs);
   }
@@ -438,8 +439,12 @@
   }
 
   .actionButton {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    font-size: 10px;
-    letter-spacing: 0.5px;
+    padding: var(--spacing-md) 4px;
+    font-size: 9px;
+    letter-spacing: 0;
+    flex: 1;
+    text-align: center;
+    white-space: nowrap;
+    min-height: 44px;
   }
 }
