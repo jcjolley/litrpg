@@ -1,6 +1,6 @@
 # Makefile for LitRPG project
 
-.PHONY: build-lambda build-ui deploy-ui deploy test clean aws-login
+.PHONY: build-lambda build-ui deploy-ui deploy test clean aws-login stats stats-local
 
 # Check AWS credentials and login if needed
 aws-login:
@@ -51,3 +51,13 @@ clean:
 dev:
 	@echo "Starting LocalStack, Quarkus, and UI..."
 	./scripts/dev-start.sh
+
+# View analytics stats from production DynamoDB
+stats: aws-login
+	eval "$$(aws configure export-credentials --format env)" && \
+		AWS_REGION=us-west-2 \
+		./gradlew :curator:run --args="stats"
+
+# View analytics stats from local DynamoDB (LocalStack)
+stats-local:
+	./gradlew :curator:run --args="stats --dynamo http://localhost:4566"

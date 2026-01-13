@@ -49,6 +49,8 @@ make deploy          # Full deployment: build and deploy everything
 make test            # Run all tests
 make clean           # Clean build artifacts
 make dev             # Start local development environment
+make stats           # View analytics from production DynamoDB
+make stats-local     # View analytics from LocalStack
 ```
 
 ## Tech Stack
@@ -67,7 +69,7 @@ make dev             # Start local development environment
 ### Two-Module Structure
 - `src/main/kotlin/org/jcjolley/books/` - REST API (Book entity, BooksService, REST resources)
 - `curator/src/main/kotlin/org/jcjolley/curator/` - CLI with layered architecture:
-  - `commands/` - CLI subcommands (add, list, update, remove, export, import)
+  - `commands/` - CLI subcommands (add, list, update, remove, export, import, stats, migrate, refresh)
   - `repository/` - DynamoDB persistence
   - `scraper/` - Audible HTML parsing
   - `llm/` - Ollama integration for summarization
