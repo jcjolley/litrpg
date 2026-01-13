@@ -5,6 +5,7 @@ interface BookCardProps {
   book: Book;
   isSelected?: boolean;
   isInteractive?: boolean;  // Can click card to go to Audible
+  isWishlisted?: boolean;
   onCardClick?: () => void;
 }
 
@@ -12,10 +13,18 @@ export function BookCard({
   book,
   isSelected = false,
   isInteractive = false,
+  isWishlisted = false,
   onCardClick,
 }: BookCardProps) {
   const cardContent = (
     <div className={styles.cardLargeBody}>
+      {/* Wishlist indicator */}
+      {isWishlisted && (
+        <div className={styles.wishlistBadge} title="In your wishlist">
+          &#9829;
+        </div>
+      )}
+
       {/* Book info */}
       <div className={styles.cardLargeContent}>
         <h2 className={styles.cardLargeTitle}>{book.title}</h2>

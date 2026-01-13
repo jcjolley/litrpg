@@ -136,11 +136,15 @@ export function Carousel({
   return (
     <div className={containerClasses}>
       <div className={styles.viewport}>
+        {/* Dark overlay when stopped to dim background cards */}
+        {showActions && <div className={styles.overlay} />}
+
         <CarouselTrack
           books={books}
           angle={angle}
           selectedIndex={selectedIndex}
           spinning={spinState === 'spinning' || spinState === 'continuous'}
+          userWishlist={userWishlist}
           onCoverClick={onCoverClick}
           onCardClick={handleCardClick}
         />

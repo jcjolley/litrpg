@@ -8,6 +8,7 @@ interface CarouselTrackProps {
   angle: number;
   selectedIndex: number | null;
   spinning: boolean;
+  userWishlist: string[];
   onCoverClick?: () => void;
   onCardClick?: (index: number) => void;
 }
@@ -56,6 +57,7 @@ export function CarouselTrack({
   angle,
   selectedIndex,
   spinning,
+  userWishlist,
   onCoverClick,
   onCardClick,
 }: CarouselTrackProps) {
@@ -149,6 +151,7 @@ export function CarouselTrack({
               book={book}
               isSelected={isSelected}
               isInteractive={isAtCenter}
+              isWishlisted={userWishlist.includes(book.id)}
               onCardClick={isAtCenter ? onCoverClick : undefined}
             />
           </div>

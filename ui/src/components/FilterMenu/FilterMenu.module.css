@@ -280,19 +280,28 @@
 @media (max-width: 600px) {
   .container {
     max-width: 100%;
-    padding: 0 var(--spacing-sm);
+    padding: 0;
   }
 
   .header {
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    gap: var(--spacing-sm);
+    border-width: 2px;
+    box-shadow: inset 0 0 0 1px var(--ff-border-inner);
   }
 
-  .headerLabel {
+  .headerIcon {
     font-size: 10px;
+    min-width: 12px;
+  }
+
+  /* Hide label on mobile, just show the value */
+  .headerLabel {
+    display: none;
   }
 
   .headerValue {
-    font-size: 10px;
+    font-size: 9px;
   }
 
   .menuContainer {
