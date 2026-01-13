@@ -53,12 +53,13 @@ export function BookCard({
 
         <p className={styles.cardLargeDescription}>{book.description}</p>
 
-        <span
+        <div
           className={styles.cardLargeHint}
           style={{ visibility: isInteractive ? 'visible' : 'hidden' }}
         >
-          Click to view on Audible
-        </span>
+          <span>View on Audible</span>
+          <span className={styles.cardLargeHintSubtitle}>(Affiliate Link)</span>
+        </div>
       </div>
     </div>
   );

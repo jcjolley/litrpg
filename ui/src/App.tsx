@@ -7,13 +7,17 @@ import { FilterMenu } from './components/FilterMenu';
 import { StatsPanel } from './components/StatsPanel';
 import { WishlistPanel } from './components/WishlistPanel';
 import { RemortDialog } from './components/RemortDialog';
+import { PrivacyPolicy } from './components/PrivacyPolicy';
+import { HistoryPanel } from './components/HistoryPanel';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useBooks } from './hooks/useBooks';
 import { useWishlist } from './hooks/useWishlist';
 import { useNotInterested } from './hooks/useNotInterested';
+import { useHistory } from './hooks/useHistory';
 import { useAchievements, type Achievement } from './hooks/useAchievements';
 import { useAchievementEffects } from './hooks/useAchievementEffects';
 import { recordImpression, recordClick, recordWishlist, recordNotInterested } from './api/books';
+import { getAffiliateUrl } from './config';
 import type { Book } from './types/book';
 
 type OnboardingPhase = 'initial' | 'snarky';
@@ -27,6 +31,7 @@ export default function App() {
   const { books, loading, error, filters, setFilters } = useBooks({ bookLimit: achievementEffects.bookLimit });
   const { wishlist, addToWishlist, removeFromWishlist, count: wishlistCount } = useWishlist();
   const { notInterestedIds, addNotInterested, count: notInterestedCount } = useNotInterested();
+  const { history, addToHistory, clearHistory } = useHistory();
 
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [triggerSpin, setTriggerSpin] = useState(false);
@@ -36,9 +41,11 @@ export default function App() {
   const [onboardingPhase, setOnboardingPhase] = useState<OnboardingPhase>('initial');
   const [currentAchievement, setCurrentAchievement] = useState<Achievement | null>(null);
 
-  // Stats panel, wishlist panel, and remort dialog state
+  // Panel and dialog state
   const [showStatsPanel, setShowStatsPanel] = useState(false);
   const [showWishlistPanel, setShowWishlistPanel] = useState(false);
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showRemortDialog, setShowRemortDialog] = useState(false);
 
   // Filter out not-interested books
@@ -64,6 +71,9 @@ export default function App() {
   const handleBookSelected = useCallback(async (book: Book) => {
     setSelectedBook(book);
 
+    // Add to history
+    addToHistory(book.id);
+
     // Track spin for speedReader achievement
     const speedReaderAchievement = trackSpin();
     if (speedReaderAchievement) {
@@ -76,7 +86,7 @@ export default function App() {
     } catch (err) {
       console.error('Failed to record impression:', err);
     }
-  }, [trackSpin, showAchievementNotification]);
+  }, [addToHistory, trackSpin, showAchievementNotification]);
 
   const handleSpinStart = useCallback(() => {
     setSelectedBook(null);
@@ -140,7 +150,7 @@ export default function App() {
       console.error('Failed to record click:', err);
     }
 
-    window.open(selectedBook.audibleUrl, '_blank');
+    window.open(getAffiliateUrl(selectedBook.audibleUrl), '_blank');
   }, [selectedBook]);
 
   // Onboarding handlers
@@ -224,11 +234,29 @@ export default function App() {
           >
             <span role="img" aria-label="books">&#128218;</span>
           </button>
+          <button
+            className="stats-button"
+            onClick={() => setShowHistoryPanel(true)}
+            disabled={showOnboarding}
+            type="button"
+            title="Journal"
+          >
+            <span role="img" aria-label="journal">&#128220;</span>
+          </button>
           <FilterMenu
             filters={filters}
             onFiltersChange={handleFiltersChange}
             disabled={showOnboarding}
           />
+          <button
+            className="stats-button"
+            onClick={() => setShowPrivacyPolicy(true)}
+            disabled={showOnboarding}
+            type="button"
+            title="Privacy & Disclosure"
+          >
+            <span role="img" aria-label="info">&#9432;</span>
+          </button>
           <button
             className="stats-button"
             onClick={() => setShowStatsPanel(true)}
@@ -284,6 +312,14 @@ export default function App() {
           unlockedAchievements={unlockedAchievements}
         />
 
+        <HistoryPanel
+          isOpen={showHistoryPanel}
+          onClose={() => setShowHistoryPanel(false)}
+          history={history}
+          books={books}
+          onClear={clearHistory}
+        />
+
         <StatsPanel
           isOpen={showStatsPanel}
           onClose={() => setShowStatsPanel(false)}
@@ -299,8 +335,12 @@ export default function App() {
 
         <RemortDialog
           isOpen={showRemortDialog}
-          onConfirm={() => {}}
           onCancel={() => setShowRemortDialog(false)}
+        />
+
+        <PrivacyPolicy
+          isOpen={showPrivacyPolicy}
+          onClose={() => setShowPrivacyPolicy(false)}
         />
       </div>
     </ThemeProvider>

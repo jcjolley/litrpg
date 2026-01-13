@@ -234,21 +234,55 @@
 
 /* Mobile responsiveness */
 @media (max-width: 600px) {
+  .overlay {
+    align-items: flex-start;
+    padding-top: 60px;
+  }
+
+  .dialog {
+    max-height: calc(100vh - 80px);
+  }
+
   .content {
     flex-direction: column;
     align-items: center;
+    padding: var(--spacing-md);
+    min-height: 0;
   }
 
   .coverButton {
-    width: 140px;
+    display: none;
+  }
+
+  .info {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .description {
+    max-height: 180px;
+    overflow-y: auto;
+    flex: none;
+    margin-bottom: var(--spacing-sm);
   }
 
   .actions {
-    justify-content: center;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
+    gap: 4px !important;
+    padding: 8px !important;
+    flex-shrink: 0;
   }
 
   .button {
-    font-size: 7px;
-    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 5px !important;
+    padding: 8px 2px !important;
+    flex: 1 1 0 !important;
+    justify-content: center !important;
+    text-align: center;
+    white-space: nowrap;
+    min-width: 0;
   }
 }

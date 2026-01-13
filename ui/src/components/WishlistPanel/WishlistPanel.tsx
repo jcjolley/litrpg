@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useAchievementEffects } from '../../hooks/useAchievementEffects';
+import { getAffiliateUrl } from '../../config';
 import type { Book } from '../../types/book';
 import styles from './WishlistPanel.module.css';
 
@@ -46,7 +47,7 @@ export function WishlistPanel({
   };
 
   const handleBookClick = (book: Book) => {
-    window.open(book.audibleUrl, '_blank');
+    window.open(getAffiliateUrl(book.audibleUrl), '_blank');
   };
 
   if (!isOpen) return null;
