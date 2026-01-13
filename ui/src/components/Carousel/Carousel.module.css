@@ -76,17 +76,8 @@
     0 8px 32px rgba(0, 0, 0, 0.8);
 }
 
-/* Clickable card - entire card is a button */
-button.cardLargeClickable {
-  /* Reset all button defaults */
-  display: block;
-  padding: 0;
-  margin: 0;
-  margin-left: -350px;
-  margin-top: -250px;
-  font-family: inherit;
-  font-size: inherit;
-  text-align: left;
+/* Clickable card */
+.cardLargeClickable {
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -355,11 +346,6 @@ button.cardLargeClickable {
   .cardLargeHint {
     font-size: 10px;
     flex-shrink: 0;
-  }
-
-  button.cardLargeClickable {
-    margin-left: -45vw;
-    margin-top: -30vh;
   }
 
   .actionBar {

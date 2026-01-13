@@ -44,28 +44,25 @@ export function BookCard({
 
         <p className={styles.cardLargeDescription}>{book.description}</p>
 
-        {isInteractive && (
-          <span className={styles.cardLargeHint}>Click to view on Audible</span>
-        )}
+        <span
+          className={styles.cardLargeHint}
+          style={{ visibility: isInteractive ? 'visible' : 'hidden' }}
+        >
+          Click to view on Audible
+        </span>
       </div>
     </div>
   );
 
-  // When interactive, make the entire card clickable
-  if (isInteractive && onCardClick) {
-    return (
-      <button
-        className={`${styles.cardLarge} ${styles.cardLargeSelected} ${styles.cardLargeClickable}`}
-        onClick={onCardClick}
-        type="button"
-      >
-        {cardContent}
-      </button>
-    );
-  }
+  const isClickable = isInteractive && onCardClick;
 
   return (
-    <div className={`${styles.cardLarge} ${isSelected ? styles.cardLargeSelected : ''}`}>
+    <div
+      className={`${styles.cardLarge} ${isSelected ? styles.cardLargeSelected : ''} ${isClickable ? styles.cardLargeClickable : ''}`}
+      onClick={isClickable ? onCardClick : undefined}
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+    >
       {cardContent}
     </div>
   );

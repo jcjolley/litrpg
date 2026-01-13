@@ -46,7 +46,7 @@ export function Carousel({
     [books, onBookSelected]
   );
 
-  const { angle, spinState, startSpin, startContinuousSpin, stopAndLand, reset } = useCarouselSpin({
+  const { angle, spinState, startSpin, startContinuousSpin, stopAndLand } = useCarouselSpin({
     itemCount: books.length,
     spinDuration: 4000,
     onSpinComplete: handleSpinComplete,
@@ -109,9 +109,7 @@ export function Carousel({
   // Handle external spin trigger
   useEffect(() => {
     if (triggerSpin && spinState === 'stopped') {
-      reset();
-      const timer = setTimeout(doSpin, 100);
-      return () => clearTimeout(timer);
+      doSpin();
     }
   }, [triggerSpin]);
 
