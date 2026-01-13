@@ -25,6 +25,11 @@ class BooksService(
         return bookTable.getItem { it.key { k -> k.partitionValue(id) } }
     }
 
+    fun saveBook(book: Book): Book {
+        bookTable.putItem(book)
+        return book
+    }
+
     fun getRandomBook(): Book? {
         val books = getBooks()
         return if (books.isNotEmpty()) books.random() else null
