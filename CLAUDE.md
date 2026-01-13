@@ -17,11 +17,23 @@ LitRPG is a multi-module Kotlin project for managing a catalog of LitRPG audiobo
 ./gradlew build                   # Package application
 ./gradlew test                    # Run all tests
 
-# Curator CLI
+# Curator CLI (LocalStack)
 ./gradlew :curator:run --args="list"              # List all books
 ./gradlew :curator:run --args="add <audible-url>" # Add book from Audible
 ./gradlew :curator:run --args="--help"            # Show available commands
 ./gradlew :curator:test                           # Run curator tests
+
+# Curator CLI (Production DynamoDB with AWS SSO)
+# The Java SDK doesn't support AWS SSO login_session directly, so you must
+# export credentials as environment variables before running curator commands.
+eval "$(aws configure export-credentials --format env)" && \
+  AWS_REGION=us-west-2 \
+  ./gradlew :curator:run --args="add -y <audible-url>"
+
+# Example: Add a book to production
+eval "$(aws configure export-credentials --format env)" && \
+  AWS_REGION=us-west-2 \
+  ./gradlew :curator:run --args="add -y https://www.audible.com/pd/Book-Title-Audiobook/B0XXXXXXXX"
 
 # Native build for Lambda
 ./gradlew build -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true
@@ -108,8 +120,10 @@ cd ui && npm run dev
 
 To use real production data locally:
 ```bash
-# Export from prod (requires AWS auth)
-./gradlew :curator:run --args="export -o data/books.json"
+# Export from prod (requires AWS SSO auth)
+eval "$(aws configure export-credentials --format env)" && \
+  AWS_REGION=us-west-2 \
+  ./gradlew :curator:run --args="export -o data/books.json"
 
 # Import to LocalStack
 ./gradlew :curator:run --args="import data/books.json --dynamo http://localhost:4566"
