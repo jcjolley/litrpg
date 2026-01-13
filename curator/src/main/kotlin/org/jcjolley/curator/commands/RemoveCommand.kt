@@ -6,10 +6,10 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import org.jcjolley.curator.repository.BookRepository
 
-class RemoveCommand : CliktCommand(
-    name = "remove",
-    help = "Remove a book from the catalog"
-) {
+class RemoveCommand : CliktCommand(name = "remove") {
+    override fun help(context: com.github.ajalt.clikt.core.Context) =
+        "Remove a book from the catalog"
+
     private val bookId by argument(help = "Book ID to remove")
 
     private val force by option("-f", "--force", help = "Skip confirmation")

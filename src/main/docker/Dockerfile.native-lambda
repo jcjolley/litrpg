@@ -1,0 +1,13 @@
+# Dockerfile for Quarkus native Lambda deployment
+# Uses AWS provided.al2023 base image with Lambda Runtime Interface Emulator
+
+FROM public.ecr.aws/lambda/provided:al2023
+
+# Copy the native executable
+COPY build/code-with-quarkus-*-runner ${LAMBDA_TASK_ROOT}/bootstrap
+
+# Make executable
+RUN chmod +x ${LAMBDA_TASK_ROOT}/bootstrap
+
+# Lambda handler - Quarkus handles routing internally
+CMD ["io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest"]

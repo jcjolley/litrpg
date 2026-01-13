@@ -114,8 +114,15 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
   }
 
+  # Custom domain aliases
+  aliases = var.domain_name != null ? [var.domain_name, "www.${var.domain_name}"] : []
+
   viewer_certificate {
-    cloudfront_default_certificate = true
+    # Use custom certificate if domain is provided, otherwise use default
+    cloudfront_default_certificate = var.certificate_arn == null
+    acm_certificate_arn            = var.certificate_arn
+    ssl_support_method             = var.certificate_arn != null ? "sni-only" : null
+    minimum_protocol_version       = var.certificate_arn != null ? "TLSv1.2_2021" : null
   }
 
   tags = {

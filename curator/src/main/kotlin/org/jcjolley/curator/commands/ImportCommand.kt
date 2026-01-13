@@ -9,10 +9,10 @@ import org.jcjolley.curator.model.Book
 import org.jcjolley.curator.repository.BookRepository
 import java.io.File
 
-class ImportCommand : CliktCommand(
-    name = "import",
-    help = "Import books from JSON file"
-) {
+class ImportCommand : CliktCommand(name = "import") {
+    override fun help(context: com.github.ajalt.clikt.core.Context) =
+        "Import books from JSON file"
+
     private val inputFile by argument(help = "JSON file to import")
 
     private val dryRun by option("--dry-run", help = "Preview import without saving")

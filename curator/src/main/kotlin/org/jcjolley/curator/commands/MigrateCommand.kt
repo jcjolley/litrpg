@@ -12,14 +12,28 @@ import org.jcjolley.curator.scraper.AudibleScraper
 import org.jcjolley.curator.util.LengthParser
 import java.time.Instant
 
-class MigrateCommand : CliktCommand(name = "migrate") {
+/**
+ * Migrate existing books to add new GSI filter fields.
+ *
+ * @param repositoryProvider Optional factory for BookRepository (for testing)
+ * @param scraperProvider Optional factory for AudibleScraper (for testing)
+ * @param summarizerProvider Optional factory for LlamaSummarizer (for testing)
+ */
+class MigrateCommand(
+    private val repositoryProvider: ((String?) -> BookRepository)? = null,
+    private val scraperProvider: (() -> AudibleScraper)? = null,
+    private val summarizerProvider: ((String, String) -> LlamaSummarizer)? = null
+) : CliktCommand(name = "migrate") {
     override fun help(context: com.github.ajalt.clikt.core.Context) =
-        "Migrate existing books to add new filter fields (subgenre, length)"
+        "Migrate existing books to add new filter fields (genre, length, gsiPartition)"
 
     private val dryRun by option("--dry-run", help = "Preview changes without saving")
         .flag(default = false)
 
     private val skipLlm by option("--skip-llm", help = "Only update length fields, skip LLM re-extraction")
+        .flag(default = false)
+
+    private val force by option("--force", help = "Re-migrate all books, even if already migrated")
         .flag(default = false)
 
     private val dynamoEndpoint by option("--dynamo", help = "DynamoDB endpoint")
@@ -31,10 +45,13 @@ class MigrateCommand : CliktCommand(name = "migrate") {
         .default("llama3.2:latest")
 
     override fun run() = runBlocking {
-        val repository = BookRepository(dynamoEndpoint)
-        val scraper = if (!skipLlm) AudibleScraper() else null
+        val repository = repositoryProvider?.invoke(dynamoEndpoint) ?: BookRepository(dynamoEndpoint)
+        val scraper = if (!skipLlm) {
+            scraperProvider?.invoke() ?: AudibleScraper()
+        } else null
         val summarizer = if (!skipLlm) {
-            LlamaSummarizer(OllamaClient(ollamaEndpoint, ollamaModel))
+            summarizerProvider?.invoke(ollamaEndpoint, ollamaModel)
+                ?: LlamaSummarizer(OllamaClient(ollamaEndpoint, ollamaModel))
         } else null
 
         try {
@@ -47,8 +64,13 @@ class MigrateCommand : CliktCommand(name = "migrate") {
             var failed = 0
 
             for (book in books) {
-                // Skip if already fully migrated (has all new fields)
-                if (book.lengthMinutes != null && book.lengthCategory != null && book.genre != null) {
+                // Skip if already fully migrated (has all new fields) unless --force is used
+                val isFullyMigrated = book.lengthMinutes != null &&
+                    book.lengthCategory != null &&
+                    book.genre != null &&
+                    book.gsiPartition == "BOOK"
+
+                if (isFullyMigrated && !force) {
                     echo("${yellow("⊘")} Skipping ${book.title} (already migrated)")
                     skipped++
                     continue
@@ -80,6 +102,7 @@ class MigrateCommand : CliktCommand(name = "migrate") {
                     lengthMinutes = lengthMinutes,
                     lengthCategory = lengthCategory,
                     genre = genre,
+                    gsiPartition = "BOOK",
                     updatedAt = Instant.now()
                 )
 

@@ -12,10 +12,10 @@ import org.jcjolley.curator.repository.BookRepository
 import org.jcjolley.curator.scraper.AudibleScraper
 import java.time.Instant
 
-class UpdateCommand : CliktCommand(
-    name = "update",
-    help = "Update a book's metadata by re-scraping Audible"
-) {
+class UpdateCommand : CliktCommand(name = "update") {
+    override fun help(context: com.github.ajalt.clikt.core.Context) =
+        "Update a book's metadata by re-scraping Audible"
+
     private val bookId by argument(help = "Book ID to update")
 
     private val rescrape by option("--rescrape", help = "Re-scrape Audible page for updated metadata")

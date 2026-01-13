@@ -69,7 +69,7 @@ resource "aws_lambda_function" "api" {
   environment {
     variables = {
       DYNAMODB_TABLE_NAME     = var.dynamodb_table_name
-      QUARKUS_PROFILE         = var.environment
+      QUARKUS_PROFILE         = "prod"  # Always use prod profile in Lambda (IAM credentials, real DynamoDB)
       DISABLE_SIGNAL_HANDLERS = "true"
     }
   }

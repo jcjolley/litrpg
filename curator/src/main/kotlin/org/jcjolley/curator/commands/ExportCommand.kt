@@ -7,10 +7,10 @@ import kotlinx.serialization.json.Json
 import org.jcjolley.curator.repository.BookRepository
 import java.io.File
 
-class ExportCommand : CliktCommand(
-    name = "export",
-    help = "Export catalog to JSON file"
-) {
+class ExportCommand : CliktCommand(name = "export") {
+    override fun help(context: com.github.ajalt.clikt.core.Context) =
+        "Export catalog to JSON file"
+
     private val output by option("-o", "--output", help = "Output file path (default: stdout)")
 
     private val dynamoEndpoint by option("--dynamo", help = "DynamoDB endpoint (local testing)")

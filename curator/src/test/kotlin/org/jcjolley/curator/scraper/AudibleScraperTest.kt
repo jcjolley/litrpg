@@ -39,15 +39,14 @@ class AudibleScraperTest {
     }
 
     @Test
-    fun `parseProductPage extracts author info`() {
+    fun `parseProductPage extracts author info from JSON`() {
         val html = """
             <html>
             <body>
                 <h1>Test Book</h1>
-                <li class="authorLabel">
-                    <span>By: </span>
-                    <a href="/author/John-Doe">John Doe</a>
-                </li>
+                <script>
+                    {"rating":{"value":4.5,"count":100},"authors":[{"name":"John Doe"}],"narrators":[{"name":"Jane Smith"}]}
+                </script>
             </body>
             </html>
         """.trimIndent()
@@ -55,19 +54,15 @@ class AudibleScraperTest {
         val result = scraper.parseProductPage(html, "https://www.audible.com/pd/Test/B0CK123456")
 
         expectThat(result.author).isEqualTo("John Doe")
-        expectThat(result.authorUrl).isEqualTo("https://www.audible.com/author/John-Doe")
     }
 
     @Test
-    fun `parseProductPage extracts series with position`() {
+    fun `parseProductPage extracts series with position from JSON`() {
         val html = """
             <html>
             <body>
                 <h1>Test Book</h1>
-                <li class="seriesLabel">
-                    <span>Series: </span>
-                    <a href="/series/Cradle">Cradle, Book 3</a>
-                </li>
+                "series": [{"part": "Book 3", "name": "Cradle"}]
             </body>
             </html>
         """.trimIndent()
@@ -84,10 +79,7 @@ class AudibleScraperTest {
             <html>
             <body>
                 <h1>Test Book</h1>
-                <li class="seriesLabel">
-                    <span>Series: </span>
-                    <a href="/series/Standalone">Standalone Series</a>
-                </li>
+                "series": [{"part": "", "name": "Standalone Series"}]
             </body>
             </html>
         """.trimIndent()
@@ -99,15 +91,14 @@ class AudibleScraperTest {
     }
 
     @Test
-    fun `parseProductPage extracts rating`() {
+    fun `parseProductPage extracts rating from JSON`() {
         val html = """
             <html>
             <body>
                 <h1>Test Book</h1>
-                <li class="ratingsLabel">
-                    <span class="bc-pub-offscreen">4.7 out of 5 stars</span>
-                    <span class="bc-text">12,847 ratings</span>
-                </li>
+                <script>
+                    {"rating":{"value":4.7,"count":12847},"authors":[{"name":"Author"}],"narrators":[{"name":"Narrator"}]}
+                </script>
             </body>
             </html>
         """.trimIndent()
@@ -119,32 +110,28 @@ class AudibleScraperTest {
     }
 
     @Test
-    fun `parseProductPage extracts runtime`() {
+    fun `parseProductPage extracts runtime from JSON`() {
         val html = """
             <html>
             <body>
                 <h1>Test Book</h1>
-                <li class="runtimeLabel">
-                    <span>Length: 12 hrs 34 mins</span>
-                </li>
+                "duration":"12 hrs and 34 mins"
             </body>
             </html>
         """.trimIndent()
 
         val result = scraper.parseProductPage(html, "https://www.audible.com/pd/Test/B0CK123456")
 
-        expectThat(result.length).isEqualTo("12 hrs 34 mins")
+        expectThat(result.length).isEqualTo("12 hrs and 34 mins")
     }
 
     @Test
-    fun `parseProductPage extracts description`() {
+    fun `parseProductPage extracts description from JSON`() {
         val html = """
             <html>
             <body>
                 <h1>Test Book</h1>
-                <div class="bc-expander-content">
-                    <span class="bc-text">This is a long description of the book that tells you about the plot and characters.</span>
-                </div>
+                "description": "<p>This is a long description of the book that tells you about the plot and characters.</p>"
             </body>
             </html>
         """.trimIndent()

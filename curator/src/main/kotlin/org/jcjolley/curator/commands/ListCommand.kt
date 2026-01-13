@@ -6,10 +6,10 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import org.jcjolley.curator.repository.BookRepository
 
-class ListCommand : CliktCommand(
-    name = "list",
-    help = "List all books in the catalog"
-) {
+class ListCommand : CliktCommand(name = "list") {
+    override fun help(context: com.github.ajalt.clikt.core.Context) =
+        "List all books in the catalog"
+
     private val dynamoEndpoint by option("--dynamo", help = "DynamoDB endpoint (local testing)")
 
     private val verbose by option("-v", "--verbose", help = "Show full details")

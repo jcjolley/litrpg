@@ -2,11 +2,10 @@ import styles from './RemortDialog.module.css';
 
 interface RemortDialogProps {
   isOpen: boolean;
-  onConfirm: () => void;
   onCancel: () => void;
 }
 
-export function RemortDialog({ isOpen, onConfirm, onCancel }: RemortDialogProps) {
+export function RemortDialog({ isOpen, onCancel }: RemortDialogProps) {
   if (!isOpen) return null;
 
   const handleConfirm = () => {

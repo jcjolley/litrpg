@@ -45,3 +45,10 @@ tmpclaude-*
 hs_err_pid*.log
 *.tfplan
 tfplan
+contact.json
+
+# Claude Code
+.claude/
+
+# Local data
+data/

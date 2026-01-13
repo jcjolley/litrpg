@@ -8,6 +8,9 @@ pluginManagement {
     }
     plugins {
         id(quarkusPluginId) version quarkusPluginVersion
+        id("org.jetbrains.gradle.plugin.idea-ext") version "1.1.8"
     }
 }
-rootProject.name="litrpg"
+rootProject.name="code-with-quarkus"
+
+include("curator")

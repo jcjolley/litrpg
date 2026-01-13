@@ -74,9 +74,23 @@ variable "cors_origins" {
   default     = ["*"]
 }
 
+# DynamoDB PITR
+variable "enable_pitr" {
+  description = "Enable Point-in-Time Recovery for DynamoDB table"
+  type        = bool
+  default     = false
+}
+
 # Frontend
 variable "frontend_bucket_name" {
   description = "S3 bucket name prefix for frontend hosting"
   type        = string
   default     = "litrpg-frontend-dev"
+}
+
+# Custom Domain (optional)
+variable "domain_name" {
+  description = "Custom domain name (optional, e.g., 'system-litrpg.com')"
+  type        = string
+  default     = "system-litrpg.com"
 }
