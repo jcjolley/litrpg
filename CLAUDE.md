@@ -72,6 +72,51 @@ See the Terraform section below for full details on AWS deployment.
 
 **Ollama**: Start with `ollama serve` before using curator's add command.
 
+### Local Development with LocalStack
+
+The app defaults to LocalStack for local development.
+
+**Quick Start (Recommended)**: Use the startup script to launch everything:
+```bash
+# Windows
+./scripts/dev-start.ps1
+
+# Linux/Mac
+./scripts/dev-start.sh
+```
+
+**Manual Setup**: If you need more control:
+```bash
+# 1. Start LocalStack
+docker compose up -d
+
+# 2. Create table and load sample data
+aws dynamodb create-table --endpoint-url http://localhost:4566 \
+  --table-name litrpg-books-dev \
+  --attribute-definitions AttributeName=id,AttributeType=S \
+  --key-schema AttributeName=id,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST --region us-east-1
+
+./gradlew :curator:run --args="import data/books.json --dynamo http://localhost:4566"
+
+# 3. Start Quarkus (defaults to LocalStack)
+./gradlew quarkusDev
+
+# 4. Start the UI (in another terminal)
+cd ui && npm run dev
+```
+
+To use real production data locally:
+```bash
+# Export from prod (requires AWS auth)
+./gradlew :curator:run --args="export -o data/books.json"
+
+# Import to LocalStack
+./gradlew :curator:run --args="import data/books.json --dynamo http://localhost:4566"
+```
+
+**Configuration**: By default, Quarkus connects to `localhost:4566` with test credentials. For production (Lambda), set `QUARKUS_PROFILE=prod` to use IAM role credentials.
+
 ## Testing Strategy
 
 ### Philosophy
@@ -150,6 +195,9 @@ terraform/
 ### Commands
 ```bash
 cd terraform/environments/dev
+
+# Export AWS credentials for Terraform (required on Windows with AWS CLI login session)
+eval $(aws configure export-credentials --format env)
 
 terraform init                  # Initialize providers and modules
 terraform plan                  # Preview changes

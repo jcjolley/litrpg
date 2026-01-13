@@ -133,9 +133,11 @@ export function CarouselTrack({
             className={styles.cardWrapper}
             style={{
               transform: `translate(${x}px, ${y}px) scale(${scale})`,
-              // Dim non-selected cards when stopped with a selection
-              opacity: !spinning && selectedIndex !== null && !isAtCenter ? opacity * 0.3 : opacity,
-              zIndex: isAtCenter ? 200 : isSelected ? 100 : Math.round(50 - distFromSelection),
+              // Dim non-selected cards when stopped with a selection (0.7 keeps them visible but subdued)
+              opacity: !spinning && selectedIndex !== null && !isAtCenter ? opacity * 0.7 : opacity,
+              // z-index: selected card at 200 (above overlay at 100), spinning selected at 100, others based on distance
+              // Cards closer to selection get higher z-index (max 50 at selection, min 1 at edges)
+              zIndex: isAtCenter ? 200 : isSelected ? 100 : Math.max(1, Math.round(50 - distFromSelection)),
               transition: isAtCenter ? 'transform 0.3s ease-out, opacity 0.4s ease-out' : 'opacity 0.4s ease-out',
               cursor: canClick ? 'pointer' : undefined,
             }}
