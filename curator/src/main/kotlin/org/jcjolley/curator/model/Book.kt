@@ -39,6 +39,8 @@ data class Book(
     val clickThroughCount: Int = 0,
     val notInterestedCount: Int = 0,
     val impressionCount: Int = 0,
+    val upvoteCount: Int = 0,
+    val downvoteCount: Int = 0,
 
     // Filter/GSI fields
     val genre: String? = null,              // e.g., "Cultivation", "System Apocalypse", "Time Loop"

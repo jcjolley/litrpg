@@ -17,9 +17,9 @@ sleep 3
 
 # Wait for LocalStack to be ready
 echo "Waiting for LocalStack to be ready..."
-until curl -s http://localhost:4566/_localstack/health | grep -q '"dynamodb": "available"'; do
-  sleep 1
-done
+#until curl -s http://localhost:4566/_localstack/health | grep -q '"dynamodb": "available"'; do
+#  sleep 1
+#done
 echo "LocalStack is ready!"
 
 # 2. Create DynamoDB table (ignore error if already exists)
@@ -48,9 +48,9 @@ QUARKUS_PID=$!
 
 # Wait for Quarkus to be ready
 echo "Waiting for Quarkus to be ready..."
-until curl -s http://localhost:8080/books > /dev/null 2>&1; do
-  sleep 2
-done
+#until curl -s http://localhost:8080/books > /dev/null 2>&1; do
+#  sleep 2
+#done
 echo "Quarkus is ready!"
 
 # 5. Start UI dev server

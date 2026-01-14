@@ -40,6 +40,8 @@ data class Book(
     var clickThroughCount: Int = 0,
     var notInterestedCount: Int = 0,
     var impressionCount: Int = 0,
+    var upvoteCount: Int = 0,
+    var downvoteCount: Int = 0,
     // GSI filter fields
     @get:DynamoDbSecondaryPartitionKey(indexNames = ["genre-index"])
     var genre: String? = null,

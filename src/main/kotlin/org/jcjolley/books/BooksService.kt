@@ -67,6 +67,22 @@ class BooksService(
         return true
     }
 
+    fun incrementUpvote(id: String): Boolean {
+        val book = getBook(id) ?: return false
+        book.upvoteCount += 1
+        book.updatedAt = java.time.Instant.now().toEpochMilli()
+        bookTable.putItem(book)
+        return true
+    }
+
+    fun incrementDownvote(id: String): Boolean {
+        val book = getBook(id) ?: return false
+        book.downvoteCount += 1
+        book.updatedAt = java.time.Instant.now().toEpochMilli()
+        bookTable.putItem(book)
+        return true
+    }
+
     /**
      * Query books with combined filters.
      * Uses the most selective GSI, then filters remaining criteria in memory.

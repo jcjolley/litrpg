@@ -47,4 +47,24 @@ class BookMetricsResource(private val booksService: BooksService) {
             Response.status(Response.Status.NOT_FOUND).build()
         }
     }
+
+    @POST
+    @Path("/upvote")
+    fun recordUpvote(@PathParam("id") id: String): Response {
+        return if (booksService.incrementUpvote(id)) {
+            Response.noContent().build()
+        } else {
+            Response.status(Response.Status.NOT_FOUND).build()
+        }
+    }
+
+    @POST
+    @Path("/downvote")
+    fun recordDownvote(@PathParam("id") id: String): Response {
+        return if (booksService.incrementDownvote(id)) {
+            Response.noContent().build()
+        } else {
+            Response.status(Response.Status.NOT_FOUND).build()
+        }
+    }
 }
