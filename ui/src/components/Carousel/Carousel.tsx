@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, type TouchEvent } from 'react';
 import type { Book } from '../../types/book';
+import type { VoteType } from '../../hooks/useVotes';
 import { CarouselTrack } from './CarouselTrack';
 import { useCarouselSpin } from '../../hooks/useCarouselSpin';
 import { useWeightedSelection } from '../../hooks/useWeightedSelection';
@@ -8,6 +9,7 @@ import styles from './Carousel.module.css';
 interface CarouselProps {
   books: Book[];
   userWishlist: string[];
+  userVotes: { [bookId: string]: VoteType };
   onBookSelected: (book: Book) => void;
   triggerSpin?: boolean;
   onSpinStart?: () => void;
@@ -15,6 +17,7 @@ interface CarouselProps {
   onSpinAgain?: () => void;
   onIgnore?: () => void;
   onCoverClick?: () => void;
+  onVote?: (bookId: string, vote: VoteType) => void;
   selectedBookId?: string | null;
   continuousSpin?: boolean; // When true, spin indefinitely until released
   spinSpeedMultiplier?: number; // Speed modifier (1.0 = normal, 0.5 = 2x faster)
@@ -24,6 +27,7 @@ interface CarouselProps {
 export function Carousel({
   books,
   userWishlist,
+  userVotes,
   onBookSelected,
   triggerSpin,
   onSpinStart,
@@ -31,6 +35,7 @@ export function Carousel({
   onSpinAgain,
   onIgnore,
   onCoverClick,
+  onVote,
   selectedBookId,
   continuousSpin = false,
   spinSpeedMultiplier = 1.0,
@@ -50,7 +55,7 @@ export function Carousel({
     [books, onBookSelected]
   );
 
-  const { angle, spinState, startSpin, startContinuousSpin, stopAndLand } = useCarouselSpin({
+  const { angle, spinState, startSpin, startContinuousSpin, stopAndLand, nudge } = useCarouselSpin({
     itemCount: books.length,
     spinDuration: 4000,
     spinSpeedMultiplier,
@@ -88,12 +93,93 @@ export function Carousel({
     doLandRef.current = doLand;
   }, [doLand]);
 
-  // Handle clicking on a non-selected card to focus it
-  const handleCardClick = useCallback((index: number) => {
-    if (spinState === 'spinning' || spinState === 'continuous') return;
-    setSelectedIndex(null);
-    startSpin(index);
-  }, [spinState, startSpin]);
+  // Swipe tracking for touch gestures
+  const touchStartX = useRef<number | null>(null);
+  const SWIPE_THRESHOLD = 50; // minimum pixels to count as a swipe
+
+  // Helper to chain multiple nudges for non-adjacent card clicks
+  const nudgeMultiple = useCallback(
+    (direction: 'left' | 'right', steps: number) => {
+      if (steps <= 0) return;
+
+      const doNextNudge = (remaining: number) => {
+        if (remaining <= 0) return;
+        nudge(direction, () => {
+          if (remaining > 1) {
+            doNextNudge(remaining - 1);
+          }
+        });
+      };
+
+      doNextNudge(steps);
+    },
+    [nudge]
+  );
+
+  // Handle clicking on a non-selected card - use nudge instead of full spin
+  const handleCardClick = useCallback(
+    (index: number) => {
+      if (spinState === 'spinning' || spinState === 'continuous' || spinState === 'nudging') return;
+      if (selectedIndex === null) return;
+
+      // Calculate shortest path (accounting for wrap-around)
+      let diff = index - selectedIndex;
+      const halfLength = books.length / 2;
+
+      // Take the shorter path around the wheel
+      if (diff > halfLength) diff -= books.length;
+      else if (diff < -halfLength) diff += books.length;
+
+      if (diff === 0) return; // Already selected
+
+      const direction = diff > 0 ? 'left' : 'right';
+      const steps = Math.abs(diff);
+
+      nudgeMultiple(direction, steps);
+    },
+    [spinState, selectedIndex, books.length, nudgeMultiple]
+  );
+
+  // Keyboard navigation - arrow keys to nudge left/right
+  useEffect(() => {
+    if (spinState !== 'stopped') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        nudge('left');
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        nudge('right');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [spinState, nudge]);
+
+  // Touch handlers for swipe gestures
+  const handleTouchStart = useCallback((e: TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: TouchEvent<HTMLDivElement>) => {
+      if (touchStartX.current === null || spinState !== 'stopped') {
+        touchStartX.current = null;
+        return;
+      }
+
+      const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+      if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
+        // Swipe right (positive deltaX) = show previous card = nudge left
+        // Swipe left (negative deltaX) = show next card = nudge right
+        nudge(deltaX > 0 ? 'left' : 'right');
+      }
+      touchStartX.current = null;
+    },
+    [spinState, nudge]
+  );
 
   // Start continuous spin on mount if continuousSpin is true
   useEffect(() => {
@@ -141,7 +227,11 @@ export function Carousel({
 
   return (
     <div className={containerClasses}>
-      <div className={styles.viewport}>
+      <div
+        className={styles.viewport}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {/* Dark overlay when stopped to dim background cards */}
         {showActions && <div className={styles.overlay} />}
 
@@ -149,10 +239,12 @@ export function Carousel({
           books={books}
           angle={angle}
           selectedIndex={selectedIndex}
-          spinning={spinState === 'spinning' || spinState === 'continuous'}
+          spinning={spinState === 'spinning' || spinState === 'continuous' || spinState === 'nudging'}
           userWishlist={userWishlist}
+          userVotes={userVotes}
           onCoverClick={onCoverClick}
           onCardClick={handleCardClick}
+          onVote={onVote}
         />
       </div>
 
@@ -179,7 +271,7 @@ export function Carousel({
             onClick={onIgnore}
             type="button"
           >
-            Not Interested
+            Hide this Book
           </button>
         </div>
       )}

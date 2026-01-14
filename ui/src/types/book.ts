@@ -9,6 +9,7 @@ export interface Book {
   narrator: string | null;
   series: string | null;
   seriesPosition: number | null;
+  genre: string | null;            // Book genre/category
   length: string | null;           // Audio length (Audible only)
   releaseDate: string | null;
   language: string;
@@ -27,6 +28,8 @@ export interface Book {
   clickThroughCount: number;
   notInterestedCount: number;
   impressionCount: number;
+  upvoteCount: number;
+  downvoteCount: number;
   addedAt: string;
   updatedAt: string;
 }

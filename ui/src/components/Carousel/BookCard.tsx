@@ -1,4 +1,5 @@
 import type { Book } from '../../types/book';
+import type { VoteType } from '../../hooks/useVotes';
 import styles from './Carousel.module.css';
 
 interface BookCardProps {
@@ -6,7 +7,9 @@ interface BookCardProps {
   isSelected?: boolean;
   isInteractive?: boolean;  // Can click card to go to Audible
   isWishlisted?: boolean;
+  userVote?: VoteType | null;  // User's current vote on this book
   onCardClick?: () => void;
+  onVote?: (vote: VoteType) => void;
 }
 
 export function BookCard({
@@ -14,8 +17,21 @@ export function BookCard({
   isSelected = false,
   isInteractive = false,
   isWishlisted = false,
+  userVote = null,
   onCardClick,
+  onVote,
 }: BookCardProps) {
+  const handleVoteClick = (e: React.MouseEvent, vote: VoteType) => {
+    e.stopPropagation(); // Prevent card click
+    onVote?.(vote);
+  };
+
+  // Calculate score with optimistic UI update based on user's vote
+  const baseScore = book.upvoteCount - book.downvoteCount;
+  const userVoteAdjustment = userVote === 'up' ? 1 : userVote === 'down' ? -1 : 0;
+  const netScore = baseScore + userVoteAdjustment;
+  const scoreDisplay = netScore >= 0 ? `+${netScore}` : `${netScore}`;
+
   const cardContent = (
     <div className={styles.cardLargeBody}>
       {/* Wishlist indicator */}
@@ -24,6 +40,27 @@ export function BookCard({
           &#9829;
         </div>
       )}
+
+      {/* Vote buttons - top right corner */}
+      <div className={styles.voteButtonsCorner}>
+        <button
+          className={`${styles.voteButtonLarge} ${styles.voteUp} ${userVote === 'up' ? styles.voteActive : ''}`}
+          onClick={(e) => handleVoteClick(e, 'up')}
+          title="Upvote this book"
+        >
+          +1
+        </button>
+        <span className={`${styles.voteScore} ${netScore > 0 ? styles.voteScorePositive : netScore < 0 ? styles.voteScoreNegative : ''}`}>
+          {scoreDisplay}
+        </span>
+        <button
+          className={`${styles.voteButtonLarge} ${styles.voteDown} ${userVote === 'down' ? styles.voteActive : ''}`}
+          onClick={(e) => handleVoteClick(e, 'down')}
+          title="Downvote this book"
+        >
+          -1
+        </button>
+      </div>
 
       {/* Book info */}
       <div className={styles.cardLargeContent}>

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { BookFilters } from '../../api/books';
-import { getAuthors, getNarrators } from '../../api/books';
+import type { BookFilters, FilterState } from '../../api/books';
+import { getAuthors, getNarrators, EMPTY_FILTERS, hasActiveFilters, getFilterValues } from '../../api/books';
 import styles from './FilterMenu.module.css';
 
 // Debounce hook for search
@@ -13,9 +13,8 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-// Filter options
+// Filter options (without the "ALL/ANY" options - neutral state replaces them)
 const GENRES = [
-  { value: '', label: 'ALL' },
   { value: 'Cultivation', label: 'CULTIVATION' },
   { value: 'System Apocalypse', label: 'SYSTEM APOCALYPSE' },
   { value: 'Dungeon Core', label: 'DUNGEON CORE' },
@@ -24,10 +23,15 @@ const GENRES = [
   { value: 'Tower Climb', label: 'TOWER CLIMB' },
   { value: 'Academy', label: 'ACADEMY' },
   { value: 'GameLit', label: 'GAMELIT' },
+  { value: 'Progression Fantasy', label: 'PROGRESSION FANTASY' },
+  { value: 'Kingdom Building', label: 'KINGDOM BUILDING' },
+  { value: 'Reincarnation', label: 'REINCARNATION' },
+  { value: 'Monster Evolution', label: 'MONSTER EVOLUTION' },
+  { value: 'Portal Fantasy', label: 'PORTAL FANTASY' },
+  { value: '__uncategorized__', label: 'UNCATEGORIZED' },
 ];
 
 const LENGTHS = [
-  { value: '', label: 'ANY' },
   { value: 'Short', label: 'SHORT' },
   { value: 'Medium', label: 'MEDIUM' },
   { value: 'Long', label: 'LONG' },
@@ -35,13 +39,11 @@ const LENGTHS = [
 ];
 
 const POPULARITY = [
-  { value: '', label: 'ANY' },
   { value: 'popular', label: 'POPULAR' },
   { value: 'niche', label: 'HIDDEN GEMS' },
 ];
 
 const SOURCES = [
-  { value: '', label: 'ALL' },
   { value: 'AUDIBLE', label: 'AUDIOBOOKS' },
   { value: 'ROYAL_ROAD', label: 'WEB FICTION' },
 ];
@@ -53,6 +55,33 @@ interface FilterMenuProps {
 }
 
 type FilterRow = 'source' | 'author' | 'narrator' | 'genre' | 'length' | 'popularity';
+
+// Cycle through filter states: neutral -> include -> exclude -> neutral
+function cycleFilterState(current: FilterState | undefined): FilterState | undefined {
+  switch (current) {
+    case undefined:
+    case 'neutral':
+      return 'include';
+    case 'include':
+      return 'exclude';
+    case 'exclude':
+      return undefined; // Remove from object (neutral)
+    default:
+      return 'include';
+  }
+}
+
+// Get display prefix for filter state
+function getStatePrefix(state: FilterState | undefined): string {
+  switch (state) {
+    case 'include':
+      return '+';
+    case 'exclude':
+      return '-';
+    default:
+      return '';
+  }
+}
 
 export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuProps) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -103,55 +132,100 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
     setIsExpanded(prev => !prev);
   }, []);
 
-  const handleFilterChange = useCallback((key: keyof BookFilters, value: string) => {
+  // Handle clicking on a filter option - cycle through states
+  const handleOptionClick = useCallback((category: keyof BookFilters, value: string) => {
+    const currentState = filters[category][value];
+    const newState = cycleFilterState(currentState);
+
+    const newCategoryFilters = { ...filters[category] };
+    if (newState === undefined) {
+      delete newCategoryFilters[value];
+    } else {
+      newCategoryFilters[value] = newState;
+    }
+
     onFiltersChange({
       ...filters,
-      [key]: value || undefined, // Remove empty values
+      [category]: newCategoryFilters,
     });
   }, [filters, onFiltersChange]);
 
   const handleClearAll = useCallback(() => {
-    onFiltersChange({});
+    onFiltersChange(EMPTY_FILTERS);
   }, [onFiltersChange]);
 
   const handleRowClick = useCallback((row: FilterRow) => {
     setActiveRow(row);
   }, []);
 
-  // Get display labels for current filters
-  const getGenreLabel = () => {
-    const genre = GENRES.find(g => g.value === filters.genre);
-    return genre?.label || 'ALL';
+  // Get style class for option based on its filter state
+  const getOptionClass = (category: keyof BookFilters, value: string): string => {
+    const state = filters[category][value];
+    const classes = [styles.optionItem];
+
+    if (state === 'include') {
+      classes.push(styles.optionInclude);
+    } else if (state === 'exclude') {
+      classes.push(styles.optionExclude);
+    }
+
+    return classes.join(' ');
   };
 
-  const getLengthLabel = () => {
-    const length = LENGTHS.find(l => l.value === filters.length);
-    return length?.label || 'ANY';
+  // Get display label with state prefix
+  const getOptionLabel = (category: keyof BookFilters, value: string, label: string): string => {
+    const prefix = getStatePrefix(filters[category][value]);
+    return prefix ? `${prefix} ${label}` : label;
   };
 
-  const getPopularityLabel = () => {
-    const pop = POPULARITY.find(p => p.value === filters.popularity);
-    return pop?.label || 'ANY';
-  };
-
-  const getSourceLabel = () => {
-    const source = SOURCES.find(s => s.value === filters.source);
-    return source?.label || 'ALL';
-  };
-
-  const hasActiveFilters = filters.author || filters.narrator || filters.genre || filters.length || filters.popularity || filters.source;
-
-  // Build summary text
+  // Build summary text showing active filters
   const getSummaryText = () => {
     const parts: string[] = [];
-    if (filters.source) parts.push(getSourceLabel());
-    if (filters.author) parts.push(filters.author);
-    if (filters.narrator) parts.push(filters.narrator);
-    if (filters.genre) parts.push(getGenreLabel());
-    if (filters.length) parts.push(getLengthLabel());
-    if (filters.popularity) parts.push(getPopularityLabel());
-    return parts.length > 0 ? parts.join(' \u2022 ') : 'No filters';
+
+    const addCategoryParts = (category: keyof BookFilters, labelMap?: Record<string, string>) => {
+      const includes = getFilterValues(filters[category], 'include');
+      const excludes = getFilterValues(filters[category], 'exclude');
+
+      for (const value of includes) {
+        const label = labelMap?.[value] || value;
+        parts.push(`+${label}`);
+      }
+      for (const value of excludes) {
+        const label = labelMap?.[value] || value;
+        parts.push(`-${label}`);
+      }
+    };
+
+    const sourceLabelMap: Record<string, string> = {
+      'AUDIBLE': 'AUDIOBOOKS',
+      'ROYAL_ROAD': 'WEB FICTION',
+    };
+
+    addCategoryParts('source', sourceLabelMap);
+    addCategoryParts('author');
+    addCategoryParts('narrator');
+    addCategoryParts('genre');
+    addCategoryParts('length');
+    addCategoryParts('popularity', { 'popular': 'POPULAR', 'niche': 'HIDDEN GEMS' });
+
+    return parts.length > 0 ? parts.join(' • ') : 'No filters';
   };
+
+  // Check if category has any active filters
+  const categoryHasFilters = (category: keyof BookFilters): boolean => {
+    return Object.values(filters[category]).some(state => state === 'include' || state === 'exclude');
+  };
+
+  // Render option button
+  const renderOption = (category: keyof BookFilters, value: string, label: string) => (
+    <button
+      key={value}
+      className={getOptionClass(category, value)}
+      onClick={() => handleOptionClick(category, value)}
+    >
+      {getOptionLabel(category, value, label)}
+    </button>
+  );
 
   return (
     <div className={`${styles.container} ${disabled ? styles.disabled : ''}`}>
@@ -162,9 +236,9 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
         disabled={disabled}
         aria-expanded={isExpanded}
       >
-        <span className={styles.headerIcon}>{isExpanded ? '\u25B2' : '\u25BC'}</span>
+        <span className={styles.headerIcon}>{isExpanded ? '▲' : '▼'}</span>
         <span className={styles.headerLabel}>FILTERS:</span>
-        <span className={`${styles.headerValue} ${hasActiveFilters ? styles.active : ''}`}>
+        <span className={`${styles.headerValue} ${hasActiveFilters(filters) ? styles.active : ''}`}>
           {getSummaryText()}
         </span>
       </button>
@@ -176,45 +250,45 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
             {/* Left side: Filter categories */}
             <div className={styles.categories}>
               <button
-                className={`${styles.categoryRow} ${activeRow === 'source' ? styles.activeRow : ''}`}
+                className={`${styles.categoryRow} ${activeRow === 'source' ? styles.activeRow : ''} ${categoryHasFilters('source') ? styles.hasFilters : ''}`}
                 onClick={() => handleRowClick('source')}
               >
-                <span className={styles.cursor}>{activeRow === 'source' ? '\u25B6' : ' '}</span>
+                <span className={styles.cursor}>{activeRow === 'source' ? '▶' : ' '}</span>
                 <span className={styles.categoryLabel}>SOURCE</span>
               </button>
               <button
-                className={`${styles.categoryRow} ${activeRow === 'author' ? styles.activeRow : ''}`}
+                className={`${styles.categoryRow} ${activeRow === 'author' ? styles.activeRow : ''} ${categoryHasFilters('author') ? styles.hasFilters : ''}`}
                 onClick={() => handleRowClick('author')}
               >
-                <span className={styles.cursor}>{activeRow === 'author' ? '\u25B6' : ' '}</span>
+                <span className={styles.cursor}>{activeRow === 'author' ? '▶' : ' '}</span>
                 <span className={styles.categoryLabel}>AUTHOR</span>
               </button>
               <button
-                className={`${styles.categoryRow} ${activeRow === 'narrator' ? styles.activeRow : ''}`}
+                className={`${styles.categoryRow} ${activeRow === 'narrator' ? styles.activeRow : ''} ${categoryHasFilters('narrator') ? styles.hasFilters : ''}`}
                 onClick={() => handleRowClick('narrator')}
               >
-                <span className={styles.cursor}>{activeRow === 'narrator' ? '\u25B6' : ' '}</span>
+                <span className={styles.cursor}>{activeRow === 'narrator' ? '▶' : ' '}</span>
                 <span className={styles.categoryLabel}>NARRATOR</span>
               </button>
               <button
-                className={`${styles.categoryRow} ${activeRow === 'genre' ? styles.activeRow : ''}`}
+                className={`${styles.categoryRow} ${activeRow === 'genre' ? styles.activeRow : ''} ${categoryHasFilters('genre') ? styles.hasFilters : ''}`}
                 onClick={() => handleRowClick('genre')}
               >
-                <span className={styles.cursor}>{activeRow === 'genre' ? '\u25B6' : ' '}</span>
+                <span className={styles.cursor}>{activeRow === 'genre' ? '▶' : ' '}</span>
                 <span className={styles.categoryLabel}>GENRE</span>
               </button>
               <button
-                className={`${styles.categoryRow} ${activeRow === 'length' ? styles.activeRow : ''}`}
+                className={`${styles.categoryRow} ${activeRow === 'length' ? styles.activeRow : ''} ${categoryHasFilters('length') ? styles.hasFilters : ''}`}
                 onClick={() => handleRowClick('length')}
               >
-                <span className={styles.cursor}>{activeRow === 'length' ? '\u25B6' : ' '}</span>
+                <span className={styles.cursor}>{activeRow === 'length' ? '▶' : ' '}</span>
                 <span className={styles.categoryLabel}>LENGTH</span>
               </button>
               <button
-                className={`${styles.categoryRow} ${activeRow === 'popularity' ? styles.activeRow : ''}`}
+                className={`${styles.categoryRow} ${activeRow === 'popularity' ? styles.activeRow : ''} ${categoryHasFilters('popularity') ? styles.hasFilters : ''}`}
                 onClick={() => handleRowClick('popularity')}
               >
-                <span className={styles.cursor}>{activeRow === 'popularity' ? '\u25B6' : ' '}</span>
+                <span className={styles.cursor}>{activeRow === 'popularity' ? '▶' : ' '}</span>
                 <span className={styles.categoryLabel}>POPULARITY</span>
               </button>
             </div>
@@ -226,15 +300,7 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
             <div className={styles.options}>
               {activeRow === 'source' && (
                 <div className={styles.optionsList}>
-                  {SOURCES.map(source => (
-                    <button
-                      key={source.value}
-                      className={`${styles.optionItem} ${filters.source === source.value || (!filters.source && source.value === '') ? styles.selected : ''}`}
-                      onClick={() => handleFilterChange('source', source.value)}
-                    >
-                      {source.label}
-                    </button>
-                  ))}
+                  {SOURCES.map(source => renderOption('source', source.value, source.label))}
                 </div>
               )}
               {activeRow === 'author' && (
@@ -247,24 +313,10 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
                     onChange={(e) => setAuthorSearch(e.target.value)}
                   />
                   <div className={styles.optionsList}>
-                    <button
-                      className={`${styles.optionItem} ${!filters.author ? styles.selected : ''}`}
-                      onClick={() => handleFilterChange('author', '')}
-                    >
-                      ALL AUTHORS
-                    </button>
                     {isLoadingAuthors ? (
                       <span className={styles.loading}>Loading...</span>
                     ) : (
-                      authors.map(author => (
-                        <button
-                          key={author}
-                          className={`${styles.optionItem} ${filters.author === author ? styles.selected : ''}`}
-                          onClick={() => handleFilterChange('author', author)}
-                        >
-                          {author}
-                        </button>
-                      ))
+                      authors.map(author => renderOption('author', author, author))
                     )}
                   </div>
                 </div>
@@ -279,65 +331,27 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
                     onChange={(e) => setNarratorSearch(e.target.value)}
                   />
                   <div className={styles.optionsList}>
-                    <button
-                      className={`${styles.optionItem} ${!filters.narrator ? styles.selected : ''}`}
-                      onClick={() => handleFilterChange('narrator', '')}
-                    >
-                      ALL NARRATORS
-                    </button>
                     {isLoadingNarrators ? (
                       <span className={styles.loading}>Loading...</span>
                     ) : (
-                      narrators.map(narrator => (
-                        <button
-                          key={narrator}
-                          className={`${styles.optionItem} ${filters.narrator === narrator ? styles.selected : ''}`}
-                          onClick={() => handleFilterChange('narrator', narrator)}
-                        >
-                          {narrator}
-                        </button>
-                      ))
+                      narrators.map(narrator => renderOption('narrator', narrator, narrator))
                     )}
                   </div>
                 </div>
               )}
               {activeRow === 'genre' && (
                 <div className={styles.optionsList}>
-                  {GENRES.map(genre => (
-                    <button
-                      key={genre.value}
-                      className={`${styles.optionItem} ${filters.genre === genre.value || (!filters.genre && genre.value === '') ? styles.selected : ''}`}
-                      onClick={() => handleFilterChange('genre', genre.value)}
-                    >
-                      {genre.label}
-                    </button>
-                  ))}
+                  {GENRES.map(genre => renderOption('genre', genre.value, genre.label))}
                 </div>
               )}
               {activeRow === 'length' && (
                 <div className={styles.optionsList}>
-                  {LENGTHS.map(length => (
-                    <button
-                      key={length.value}
-                      className={`${styles.optionItem} ${filters.length === length.value || (!filters.length && length.value === '') ? styles.selected : ''}`}
-                      onClick={() => handleFilterChange('length', length.value)}
-                    >
-                      {length.label}
-                    </button>
-                  ))}
+                  {LENGTHS.map(length => renderOption('length', length.value, length.label))}
                 </div>
               )}
               {activeRow === 'popularity' && (
                 <div className={styles.optionsList}>
-                  {POPULARITY.map(pop => (
-                    <button
-                      key={pop.value}
-                      className={`${styles.optionItem} ${filters.popularity === pop.value || (!filters.popularity && pop.value === '') ? styles.selected : ''}`}
-                      onClick={() => handleFilterChange('popularity', pop.value)}
-                    >
-                      {pop.label}
-                    </button>
-                  ))}
+                  {POPULARITY.map(pop => renderOption('popularity', pop.value, pop.label))}
                 </div>
               )}
             </div>
@@ -348,7 +362,7 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
             <button
               className={`${styles.actionButton} ${styles.clearButton}`}
               onClick={handleClearAll}
-              disabled={!hasActiveFilters}
+              disabled={!hasActiveFilters(filters)}
             >
               CLEAR ALL
             </button>

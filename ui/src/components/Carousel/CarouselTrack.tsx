@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Book } from '../../types/book';
+import type { VoteType } from '../../hooks/useVotes';
 import { BookCard } from './BookCard';
 import styles from './Carousel.module.css';
 
@@ -9,8 +10,10 @@ interface CarouselTrackProps {
   selectedIndex: number | null;
   spinning: boolean;
   userWishlist: string[];
+  userVotes: { [bookId: string]: VoteType };
   onCoverClick?: () => void;
   onCardClick?: (index: number) => void;
+  onVote?: (bookId: string, vote: VoteType) => void;
 }
 
 // Selection point - where the "featured" card sits (in degrees)
@@ -58,8 +61,10 @@ export function CarouselTrack({
   selectedIndex,
   spinning,
   userWishlist,
+  userVotes,
   onCoverClick,
   onCardClick,
+  onVote,
 }: CarouselTrackProps) {
   const anglePerItem = 360 / books.length;
   const { isMobile, vh } = useResponsiveWheel();
@@ -152,7 +157,9 @@ export function CarouselTrack({
               isSelected={isSelected}
               isInteractive={isAtCenter}
               isWishlisted={userWishlist.includes(book.id)}
+              userVote={userVotes[book.id] || null}
               onCardClick={isAtCenter ? onCoverClick : undefined}
+              onVote={onVote ? (vote) => onVote(book.id, vote) : undefined}
             />
           </div>
         );

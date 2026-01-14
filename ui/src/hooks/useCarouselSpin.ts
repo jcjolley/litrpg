@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { carouselEase } from '../utils/easing';
 
-export type SpinState = 'idle' | 'spinning' | 'continuous' | 'stopped';
+export type SpinState = 'idle' | 'spinning' | 'continuous' | 'stopped' | 'nudging';
 
 interface UseCarouselSpinOptions {
   itemCount: number;
@@ -17,6 +17,7 @@ interface UseCarouselSpinResult {
   startSpin: (targetIndex: number) => void;
   startContinuousSpin: () => void;
   stopAndLand: (targetIndex: number) => void;
+  nudge: (direction: 'left' | 'right', onComplete?: () => void) => void;
   reset: () => void;
 }
 
@@ -186,6 +187,66 @@ export function useCarouselSpin({
     [spinState, angle, getAngleForIndex, effectiveDuration, onSpinComplete]
   );
 
+  // Nudge the carousel by one position in the given direction
+  const nudge = useCallback(
+    (direction: 'left' | 'right', onComplete?: () => void) => {
+      if (spinState !== 'stopped' && spinState !== 'nudging') return;
+
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+
+      // Calculate target angle (one position in the given direction)
+      // Right = forward in carousel rotation (positive angle change = cards move right-to-left)
+      // Left = backward (negative angle change = cards move left-to-right)
+      const delta = direction === 'right' ? anglePerItem : -anglePerItem;
+      const currentAngle = currentAngleRef.current;
+      const targetAngle = currentAngle + delta;
+
+      // Calculate the new selected index after nudge
+      // Since we're moving the wheel, the index changes opposite to direction
+      const selectionAngle = 40;
+      const newAngle = targetAngle;
+      // Find which index lands at the selection point
+      let newIndex = Math.round((selectionAngle - newAngle) / anglePerItem);
+      // Normalize to valid index range
+      newIndex = ((newIndex % itemCount) + itemCount) % itemCount;
+
+      startAngleRef.current = currentAngle;
+      targetAngleRef.current = targetAngle;
+      targetIndexRef.current = newIndex;
+      startTimeRef.current = performance.now();
+
+      const nudgeDuration = 300; // Quick 300ms animation
+
+      setSpinState('nudging');
+
+      const animate = (currentTime: number) => {
+        const elapsed = currentTime - startTimeRef.current;
+        const progress = Math.min(elapsed / nudgeDuration, 1);
+        // Use a simple ease-out for quick, snappy feel
+        const easedProgress = 1 - Math.pow(1 - progress, 3);
+
+        const totalRotation = targetAngleRef.current - startAngleRef.current;
+        const newAngle = startAngleRef.current + totalRotation * easedProgress;
+
+        setAngle(newAngle);
+        currentAngleRef.current = newAngle;
+
+        if (progress < 1) {
+          animationRef.current = requestAnimationFrame(animate);
+        } else {
+          setSpinState('stopped');
+          onSpinComplete?.(targetIndexRef.current);
+          onComplete?.();
+        }
+      };
+
+      animationRef.current = requestAnimationFrame(animate);
+    },
+    [spinState, anglePerItem, itemCount, onSpinComplete]
+  );
+
   const reset = useCallback(() => {
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
@@ -203,5 +264,5 @@ export function useCarouselSpin({
     };
   }, []);
 
-  return { angle, spinState, startSpin, startContinuousSpin, stopAndLand, reset };
+  return { angle, spinState, startSpin, startContinuousSpin, stopAndLand, nudge, reset };
 }

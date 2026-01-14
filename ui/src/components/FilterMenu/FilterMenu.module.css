@@ -236,11 +236,42 @@
   color: var(--ff-text-primary);
 }
 
-.optionItem.selected {
-  background: linear-gradient(180deg, var(--ff-blue-light) 0%, var(--ff-blue-mid) 100%);
-  border-color: var(--ff-text-highlight);
+/* Include state - green tint */
+.optionInclude {
+  background: linear-gradient(180deg, #306030 0%, #204020 100%);
+  border-color: #60a060;
+  color: #90ff90;
+  box-shadow: 0 0 8px rgba(144, 255, 144, 0.3);
+}
+
+.optionInclude:hover {
+  background: linear-gradient(180deg, #408040 0%, #306030 100%);
+  border-color: #80c080;
+  color: #a0ffa0;
+}
+
+/* Exclude state - red tint */
+.optionExclude {
+  background: linear-gradient(180deg, #603030 0%, #402020 100%);
+  border-color: #a06060;
+  color: #ff9090;
+  box-shadow: 0 0 8px rgba(255, 144, 144, 0.3);
+}
+
+.optionExclude:hover {
+  background: linear-gradient(180deg, #804040 0%, #603030 100%);
+  border-color: #c08080;
+  color: #ffaaaa;
+}
+
+/* Category row indicator when it has active filters */
+.categoryRow.hasFilters .categoryLabel {
   color: var(--ff-text-highlight);
-  box-shadow: 0 0 10px rgba(248, 232, 0, 0.3);
+}
+
+.categoryRow.hasFilters .categoryLabel::after {
+  content: ' •';
+  color: var(--ff-text-highlight);
 }
 
 /* Action Buttons */

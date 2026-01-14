@@ -1,31 +1,47 @@
 import { fetchApi } from './client';
 import type { Book } from '../types/book';
 
-export interface BookFilters {
-  author?: string;
-  narrator?: string;
-  genre?: string;
-  length?: string;
-  popularity?: string;
-  source?: string;  // "AUDIBLE" or "ROYAL_ROAD"
-  limit?: number;
+export type FilterState = 'neutral' | 'include' | 'exclude';
+
+export interface CategoryFilters {
+  [value: string]: FilterState;
 }
 
-export async function getBooks(filters?: BookFilters): Promise<Book[]> {
-  const params = new URLSearchParams();
+export interface BookFilters {
+  genre: CategoryFilters;
+  author: CategoryFilters;
+  narrator: CategoryFilters;
+  length: CategoryFilters;
+  popularity: CategoryFilters;
+  source: CategoryFilters;
+}
 
-  if (filters?.author) params.set('author', filters.author);
-  if (filters?.narrator) params.set('narrator', filters.narrator);
-  if (filters?.genre) params.set('genre', filters.genre);
-  if (filters?.length) params.set('length', filters.length);
-  if (filters?.popularity) params.set('popularity', filters.popularity);
-  if (filters?.source) params.set('source', filters.source);
-  if (filters?.limit) params.set('limit', filters.limit.toString());
+// Empty filters constant
+export const EMPTY_FILTERS: BookFilters = {
+  genre: {},
+  author: {},
+  narrator: {},
+  length: {},
+  popularity: {},
+  source: {},
+};
 
-  const queryString = params.toString();
-  const url = queryString ? `/books?${queryString}` : '/books';
+export async function getBooks(): Promise<Book[]> {
+  return fetchApi<Book[]>('/books');
+}
 
-  return fetchApi<Book[]>(url);
+// Helper to get values with a specific filter state
+export function getFilterValues(category: CategoryFilters, state: FilterState): string[] {
+  return Object.entries(category)
+    .filter(([_, s]) => s === state)
+    .map(([value]) => value);
+}
+
+// Check if any filters are active
+export function hasActiveFilters(filters: BookFilters): boolean {
+  return Object.values(filters).some(category =>
+    Object.values(category).some(state => state !== 'neutral')
+  );
 }
 
 export async function getAuthors(search?: string, limit = 20): Promise<string[]> {
@@ -62,6 +78,18 @@ export async function recordWishlist(bookId: string): Promise<void> {
 
 export async function recordNotInterested(bookId: string): Promise<void> {
   return fetchApi<void>(`/books/${bookId}/not-interested`, {
+    method: 'POST',
+  });
+}
+
+export async function recordUpvote(bookId: string): Promise<void> {
+  return fetchApi<void>(`/books/${bookId}/upvote`, {
+    method: 'POST',
+  });
+}
+
+export async function recordDownvote(bookId: string): Promise<void> {
+  return fetchApi<void>(`/books/${bookId}/downvote`, {
     method: 'POST',
   });
 }

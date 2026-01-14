@@ -1,24 +1,110 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Book } from '../types/book';
-import { getBooks, type BookFilters } from '../api/books';
+import { getBooks, type BookFilters, type CategoryFilters, EMPTY_FILTERS, getFilterValues } from '../api/books';
 
 const FILTERS_KEY = 'litrpg-filters';
+
+// Migrate old single-value filters to new tri-state format
+function migrateOldFilters(stored: unknown): BookFilters {
+  if (!stored || typeof stored !== 'object') {
+    return EMPTY_FILTERS;
+  }
+
+  const old = stored as Record<string, unknown>;
+
+  // Check if already in new format (has nested objects with filter states)
+  if (old.genre && typeof old.genre === 'object' && !Array.isArray(old.genre)) {
+    return stored as BookFilters;
+  }
+
+  // Migrate old format: { genre: "Cultivation" } -> { genre: { "Cultivation": "include" } }
+  const migrated: BookFilters = { ...EMPTY_FILTERS };
+
+  const categories = ['genre', 'author', 'narrator', 'length', 'popularity', 'source'] as const;
+  for (const cat of categories) {
+    if (old[cat] && typeof old[cat] === 'string') {
+      migrated[cat] = { [old[cat] as string]: 'include' };
+    }
+  }
+
+  return migrated;
+}
 
 function loadStoredFilters(): BookFilters {
   try {
     const stored = localStorage.getItem(FILTERS_KEY);
-    return stored ? JSON.parse(stored) : {};
+    if (!stored) return EMPTY_FILTERS;
+    return migrateOldFilters(JSON.parse(stored));
   } catch {
-    return {};
+    return EMPTY_FILTERS;
   }
 }
 
-interface UseBooksOptions {
-  bookLimit?: number;
+// Special value for uncategorized items (null genre, etc.)
+const UNCATEGORIZED = '__uncategorized__';
+
+// Get the book's value for a given filter category
+function getBookValue(book: Book, category: keyof BookFilters): string | null {
+  switch (category) {
+    case 'genre':
+      return book.genre ?? UNCATEGORIZED; // Map null to special uncategorized value
+    case 'author':
+      return book.author;
+    case 'narrator':
+      return book.narrator;
+    case 'length':
+      // Map length string to category
+      if (!book.length) return null;
+      const hours = parseFloat(book.length.split(' ')[0]) || 0;
+      if (hours < 10) return 'Short';
+      if (hours < 20) return 'Medium';
+      if (hours < 40) return 'Long';
+      return 'Epic';
+    case 'popularity':
+      // Map based on metrics
+      const score = book.wishlistCount + book.clickThroughCount;
+      return score > 10 ? 'popular' : 'niche';
+    case 'source':
+      return book.source;
+    default:
+      return null;
+  }
+}
+
+// Apply tri-state filters to books
+function applyFilters(books: Book[], filters: BookFilters): Book[] {
+  return books.filter(book => {
+    for (const [category, categoryFilters] of Object.entries(filters) as [keyof BookFilters, CategoryFilters][]) {
+      const includes = getFilterValues(categoryFilters, 'include');
+      const excludes = getFilterValues(categoryFilters, 'exclude');
+
+      if (includes.length === 0 && excludes.length === 0) {
+        continue; // No filters for this category
+      }
+
+      const bookValue = getBookValue(book, category);
+
+      // If there are include filters, book must match at least one
+      if (includes.length > 0) {
+        if (!bookValue || !includes.includes(bookValue)) {
+          return false;
+        }
+      }
+
+      // If there are exclude filters, book must not match any
+      if (excludes.length > 0) {
+        if (bookValue && excludes.includes(bookValue)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  });
 }
 
 interface UseBooksResult {
-  books: Book[];
+  books: Book[];           // Filtered books
+  allBooks: Book[];        // All books (unfiltered)
   loading: boolean;
   error: Error | null;
   filters: BookFilters;
@@ -26,34 +112,32 @@ interface UseBooksResult {
   refetch: () => Promise<void>;
 }
 
-export function useBooks(options: UseBooksOptions = {}): UseBooksResult {
-  const { bookLimit } = options;
-  const [books, setBooks] = useState<Book[]>([]);
+export function useBooks(): UseBooksResult {
+  const [allBooks, setAllBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [filters, setFilters] = useState<BookFilters>(loadStoredFilters);
 
-  const fetchBooks = useCallback(
-    async (currentFilters: BookFilters) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const filtersWithLimit = { ...currentFilters, limit: bookLimit };
-        const data = await getBooks(filtersWithLimit);
-        setBooks(data);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to fetch books'));
-      } finally {
-        setLoading(false);
-      }
-    },
-    [bookLimit]
-  );
+  const fetchBooks = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getBooks();
+      setAllBooks(data);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to fetch books'));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  // Fetch when filters or bookLimit change
+  // Fetch books on mount
   useEffect(() => {
-    fetchBooks(filters);
-  }, [filters, fetchBooks]);
+    fetchBooks();
+  }, [fetchBooks]);
+
+  // Apply filters client-side
+  const books = useMemo(() => applyFilters(allBooks, filters), [allBooks, filters]);
 
   const handleSetFilters = useCallback((newFilters: BookFilters) => {
     setFilters(newFilters);
@@ -61,8 +145,8 @@ export function useBooks(options: UseBooksOptions = {}): UseBooksResult {
   }, []);
 
   const refetch = useCallback(async () => {
-    await fetchBooks(filters);
-  }, [fetchBooks, filters]);
+    await fetchBooks();
+  }, [fetchBooks]);
 
-  return { books, loading, error, filters, setFilters: handleSetFilters, refetch };
+  return { books, allBooks, loading, error, filters, setFilters: handleSetFilters, refetch };
 }

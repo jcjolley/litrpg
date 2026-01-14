@@ -57,6 +57,7 @@
   background: rgba(0, 0, 0, 0.6);
   z-index: 100;
   animation: fadeIn 0.4s ease-out;
+  pointer-events: none; /* Allow clicks to pass through to cards */
 }
 
 @keyframes fadeIn {
@@ -176,6 +177,7 @@
   color: var(--ff-text-primary);
   margin: 0;
   line-height: 1.2;
+  padding-right: 160px; /* Space for vote buttons */
 }
 
 .cardLargeSubtitle {
@@ -212,6 +214,81 @@
 .cardLargeStat {
   font-size: 14px;
   color: var(--ff-text-secondary);
+}
+
+/* Vote buttons - top right corner, larger for desktop */
+.voteButtonsCorner {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  z-index: 10;
+}
+
+.voteButtonLarge {
+  padding: 8px 14px;
+  border: 3px solid var(--ff-border-outer);
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: inset 0 0 0 2px var(--ff-border-inner);
+}
+
+.voteButtonLarge:hover {
+  transform: scale(1.08);
+}
+
+.voteScore {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--ff-text-primary);
+  min-width: 40px;
+  text-align: center;
+}
+
+.voteScorePositive {
+  color: var(--ff-text-highlight);
+}
+
+.voteScoreNegative {
+  color: #ff8080;
+}
+
+/* Vote buttons use FF3 blue theme */
+.voteUp {
+  background: linear-gradient(180deg, var(--ff-blue-light) 0%, var(--ff-blue-mid) 100%);
+  color: var(--ff-text-highlight);
+}
+
+.voteUp:hover {
+  background: linear-gradient(180deg, #2040b0 0%, #102860 100%);
+}
+
+.voteUp.voteActive {
+  background: linear-gradient(180deg, #2040b0 0%, #102860 100%);
+  box-shadow: 0 0 12px rgba(248, 232, 0, 0.4);
+  color: var(--ff-text-highlight);
+}
+
+.voteDown {
+  background: linear-gradient(180deg, var(--ff-blue-light) 0%, var(--ff-blue-mid) 100%);
+  color: #ff8080;
+  border-color: #a04040;
+}
+
+.voteDown:hover {
+  background: linear-gradient(180deg, #2040b0 0%, #102860 100%);
+  color: #ffaaaa;
+}
+
+.voteDown.voteActive {
+  background: linear-gradient(180deg, #2040b0 0%, #102860 100%);
+  box-shadow: 0 0 12px rgba(255, 128, 128, 0.4);
+  color: #ffaaaa;
 }
 
 .cardLargeDescription {
@@ -275,13 +352,15 @@
   cursor: default;
 }
 
+/* All action buttons use FF3 blue theme with text accents */
 .actionPrimary {
-  background: linear-gradient(180deg, #208040 0%, #104020 100%);
-  color: var(--ff-text-primary);
+  background: linear-gradient(180deg, var(--ff-blue-light) 0%, var(--ff-blue-mid) 100%);
+  color: var(--ff-text-highlight);
 }
 
 .actionPrimary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #30a050 0%, #206030 100%);
+  background: linear-gradient(180deg, #2040b0 0%, #102860 100%);
+  box-shadow: inset 0 0 0 2px var(--ff-border-inner), 0 0 8px rgba(248, 232, 0, 0.3);
 }
 
 .actionSecondary {
@@ -294,12 +373,14 @@
 }
 
 .actionDanger {
-  background: linear-gradient(180deg, #802020 0%, #401010 100%);
-  color: var(--ff-text-primary);
+  background: linear-gradient(180deg, var(--ff-blue-light) 0%, var(--ff-blue-mid) 100%);
+  color: #ff8080;
+  border-color: #a04040;
 }
 
 .actionDanger:hover {
-  background: linear-gradient(180deg, #a03030 0%, #602020 100%);
+  background: linear-gradient(180deg, #2040b0 0%, #102860 100%);
+  color: #ffaaaa;
 }
 
 .empty {
@@ -389,6 +470,7 @@
   .cardLargeTitle {
     font-size: 16px;
     flex-shrink: 0;
+    padding-right: 110px; /* Smaller space for mobile vote buttons */
   }
 
   .cardLargeSubtitle {
@@ -419,6 +501,23 @@
 
   .cardLargeStat {
     font-size: 11px;
+  }
+
+  .voteButtonsCorner {
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    gap: 4px;
+  }
+
+  .voteButtonLarge {
+    padding: 5px 10px;
+    font-size: 12px;
+    border-width: 2px;
+  }
+
+  .voteScore {
+    font-size: 14px;
+    min-width: 30px;
   }
 
   .cardLargeDescription {

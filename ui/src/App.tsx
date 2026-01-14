@@ -14,9 +14,10 @@ import { useBooks } from './hooks/useBooks';
 import { useWishlist } from './hooks/useWishlist';
 import { useNotInterested } from './hooks/useNotInterested';
 import { useHistory } from './hooks/useHistory';
+import { useVotes, type VoteType } from './hooks/useVotes';
 import { useAchievements, type Achievement } from './hooks/useAchievements';
 import { useAchievementEffects } from './hooks/useAchievementEffects';
-import { recordImpression, recordClick, recordWishlist, recordNotInterested } from './api/books';
+import { recordImpression, recordClick, recordWishlist, recordNotInterested, recordUpvote, recordDownvote } from './api/books';
 import { getAffiliateUrl } from './config';
 import type { Book } from './types/book';
 
@@ -28,10 +29,11 @@ export default function App() {
   const achievementEffects = useAchievementEffects(unlockedAchievements);
 
   // Data hooks
-  const { books, loading, error, filters, setFilters } = useBooks({ bookLimit: achievementEffects.bookLimit });
+  const { books, loading, error, filters, setFilters } = useBooks();
   const { wishlist, addToWishlist, removeFromWishlist, count: wishlistCount } = useWishlist();
   const { notInterestedIds, addNotInterested, count: notInterestedCount } = useNotInterested();
   const { history, addToHistory, clearHistory } = useHistory();
+  const { votes, getVote, setVote } = useVotes();
 
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [triggerSpin, setTriggerSpin] = useState(false);
@@ -161,6 +163,27 @@ export default function App() {
     }
   }, [selectedBook]);
 
+  const handleVote = useCallback(async (bookId: string, vote: VoteType) => {
+    const currentVote = getVote(bookId);
+
+    // If clicking the same vote, do nothing (already voted)
+    if (currentVote === vote) return;
+
+    // Update local state
+    setVote(bookId, vote);
+
+    // Record the vote to the API
+    try {
+      if (vote === 'up') {
+        await recordUpvote(bookId);
+      } else {
+        await recordDownvote(bookId);
+      }
+    } catch (err) {
+      console.error('Failed to record vote:', err);
+    }
+  }, [getVote, setVote]);
+
   // Onboarding handlers
   const handleOnboardingYes = useCallback(() => {
     setShowOnboarding(false);
@@ -189,9 +212,13 @@ export default function App() {
     (newFilters: typeof filters) => {
       setFilters(newFilters);
 
-      // Track genre exploration for achievement
-      if (newFilters.genre) {
-        const achievement = trackGenreExplored(newFilters.genre);
+      // Track genre exploration for achievement (check for newly included genres)
+      const includedGenres = Object.entries(newFilters.genre)
+        .filter(([_, state]) => state === 'include')
+        .map(([genre]) => genre);
+
+      for (const genre of includedGenres) {
+        const achievement = trackGenreExplored(genre);
         if (achievement) {
           showAchievementNotification(achievement);
         }
@@ -280,6 +307,7 @@ export default function App() {
           <Carousel
             books={filteredBooks}
             userWishlist={wishlist}
+            userVotes={votes}
             onBookSelected={handleBookSelected}
             triggerSpin={triggerSpin}
             onSpinStart={handleSpinStart}
@@ -287,6 +315,7 @@ export default function App() {
             onSpinAgain={handleSpinAgain}
             onIgnore={handleIgnore}
             onCoverClick={handleCoverClick}
+            onVote={handleVote}
             selectedBookId={selectedBook?.id}
             continuousSpin={showOnboarding}
             spinSpeedMultiplier={achievementEffects.spinSpeedMultiplier}
