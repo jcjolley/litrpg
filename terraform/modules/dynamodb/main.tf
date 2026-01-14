@@ -26,6 +26,16 @@ resource "aws_dynamodb_table" "books" {
   }
 
   attribute {
+    name = "audibleUrl"
+    type = "S"
+  }
+
+  attribute {
+    name = "royalRoadUrl"
+    type = "S"
+  }
+
+  attribute {
     name = "gsiPartition"
     type = "S"
   }
@@ -96,6 +106,20 @@ resource "aws_dynamodb_table" "books" {
     name            = "source-index"
     hash_key        = "source"
     range_key       = "rating"
+    projection_type = "ALL"
+  }
+
+  # GSI 7: Lookup by Audible URL (for upsert)
+  global_secondary_index {
+    name            = "audibleUrl-index"
+    hash_key        = "audibleUrl"
+    projection_type = "ALL"
+  }
+
+  # GSI 8: Lookup by Royal Road URL (for upsert)
+  global_secondary_index {
+    name            = "royalRoadUrl-index"
+    hash_key        = "royalRoadUrl"
     projection_type = "ALL"
   }
 

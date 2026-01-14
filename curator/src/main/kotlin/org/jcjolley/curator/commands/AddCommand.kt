@@ -67,7 +67,19 @@ class AddCommand : CliktCommand(name = "add") {
                 repository.createTableIfNotExists()
             }
 
-            // Step 1: Scrape the page based on source
+            // Step 1: Check if book already exists (for upsert)
+            val existingBook: Book? = when (source) {
+                Source.AUDIBLE -> repository.findByAudibleUrl(url)
+                Source.ROYAL_ROAD -> repository.findByRoyalRoadUrl(url)
+            }
+
+            if (existingBook != null) {
+                echo(yellow("⚠ Book already exists: ${existingBook.title} (ID: ${existingBook.id})"))
+                echo("  Will update existing record instead of creating new.")
+                echo("")
+            }
+
+            // Step 2: Scrape the page based on source
             val originalDescription: String
             val book: Book
 
@@ -78,13 +90,13 @@ class AddCommand : CliktCommand(name = "add") {
                     displayScrapedAudibleInfo(scraped)
                     originalDescription = scraped.originalDescription
 
-                    // Step 2: Generate description via Llama
+                    // Step 3: Generate description via Llama
                     echo("")
                     echo("Generating description via Llama...")
                     var result = summarizer.summarize(originalDescription)
                     displaySummarizationResult(result)
 
-                    // Step 3: Interactive review (if enabled and not auto-accept)
+                    // Step 4: Interactive review (if enabled and not auto-accept)
                     var finalDescription = result.blurb
                     var finalFacts = result.facts
                     if (interactive && !autoAccept) {
@@ -93,7 +105,7 @@ class AddCommand : CliktCommand(name = "add") {
                         finalFacts = reviewResult.second
                     }
 
-                    book = createAudibleBook(scraped, finalDescription, finalFacts)
+                    book = createAudibleBook(scraped, finalDescription, finalFacts, existingBook)
                 }
 
                 Source.ROYAL_ROAD -> {
@@ -102,13 +114,13 @@ class AddCommand : CliktCommand(name = "add") {
                     displayScrapedRoyalRoadInfo(scraped)
                     originalDescription = scraped.originalDescription
 
-                    // Step 2: Generate description via Llama
+                    // Step 3: Generate description via Llama
                     echo("")
                     echo("Generating description via Llama...")
                     var result = summarizer.summarize(originalDescription)
                     displaySummarizationResult(result)
 
-                    // Step 3: Interactive review (if enabled and not auto-accept)
+                    // Step 4: Interactive review (if enabled and not auto-accept)
                     var finalDescription = result.blurb
                     var finalFacts = result.facts
                     if (interactive && !autoAccept) {
@@ -117,15 +129,19 @@ class AddCommand : CliktCommand(name = "add") {
                         finalFacts = reviewResult.second
                     }
 
-                    book = createRoyalRoadBook(scraped, finalDescription, finalFacts)
+                    book = createRoyalRoadBook(scraped, finalDescription, finalFacts, existingBook)
                 }
             }
 
-            // Step 4: Save book
+            // Step 5: Save book
             repository.save(book)
 
             echo("")
-            echo(green("✓ Book added to catalog (ID: ${book.id})"))
+            if (existingBook != null) {
+                echo(green("✓ Book updated in catalog (ID: ${book.id})"))
+            } else {
+                echo(green("✓ Book added to catalog (ID: ${book.id})"))
+            }
 
         } finally {
             audibleScraper?.close()
@@ -226,13 +242,14 @@ class AddCommand : CliktCommand(name = "add") {
         }
     }
 
-    private fun createAudibleBook(scraped: ScrapedBook, description: String, facts: BookFacts): Book {
+    private fun createAudibleBook(scraped: ScrapedBook, description: String, facts: BookFacts, existing: Book? = null): Book {
         val now = Instant.now()
         val lengthMinutes = LengthParser.parseToMinutes(scraped.length)
         val lengthCategory = LengthParser.computeCategory(lengthMinutes)
 
         return Book(
-            id = UUID.randomUUID().toString(),
+            // Preserve ID if updating, otherwise generate new
+            id = existing?.id ?: UUID.randomUUID().toString(),
             title = scraped.title,
             subtitle = scraped.subtitle,
             author = scraped.author,
@@ -250,20 +267,27 @@ class AddCommand : CliktCommand(name = "add") {
             rating = scraped.rating,
             numRatings = scraped.numRatings,
             description = description,
+            // Preserve user engagement metrics if updating
+            wishlistCount = existing?.wishlistCount ?: 0,
+            clickThroughCount = existing?.clickThroughCount ?: 0,
+            notInterestedCount = existing?.notInterestedCount ?: 0,
+            impressionCount = existing?.impressionCount ?: 0,
             // GSI filter fields
             genre = facts.genre,
             lengthMinutes = lengthMinutes,
             lengthCategory = lengthCategory,
-            addedAt = now,
+            // Preserve original addedAt if updating
+            addedAt = existing?.addedAt ?: now,
             updatedAt = now
         )
     }
 
-    private fun createRoyalRoadBook(scraped: ScrapedRoyalRoadBook, description: String, facts: BookFacts): Book {
+    private fun createRoyalRoadBook(scraped: ScrapedRoyalRoadBook, description: String, facts: BookFacts, existing: Book? = null): Book {
         val now = Instant.now()
 
         return Book(
-            id = UUID.randomUUID().toString(),
+            // Preserve ID if updating, otherwise generate new
+            id = existing?.id ?: UUID.randomUUID().toString(),
             title = scraped.title,
             author = scraped.author,
             authorUrl = scraped.authorUrl,
@@ -275,9 +299,15 @@ class AddCommand : CliktCommand(name = "add") {
             numRatings = scraped.numRatings,
             pageCount = scraped.pageCount,
             description = description,
+            // Preserve user engagement metrics if updating
+            wishlistCount = existing?.wishlistCount ?: 0,
+            clickThroughCount = existing?.clickThroughCount ?: 0,
+            notInterestedCount = existing?.notInterestedCount ?: 0,
+            impressionCount = existing?.impressionCount ?: 0,
             // GSI filter fields
             genre = facts.genre,
-            addedAt = now,
+            // Preserve original addedAt if updating
+            addedAt = existing?.addedAt ?: now,
             updatedAt = now
         )
     }

@@ -111,6 +111,42 @@ class BookRepository(
         return booksTable.getItem(key)?.toBook()
     }
 
+    /**
+     * Find a book by its Audible URL using the GSI
+     */
+    fun findByAudibleUrl(url: String): Book? {
+        val response = dynamoDbClient.query { builder ->
+            builder.tableName(tableName)
+                .indexName("audibleUrl-index")
+                .keyConditionExpression("audibleUrl = :url")
+                .expressionAttributeValues(mapOf(":url" to AttributeValue.builder().s(url).build()))
+                .limit(1)
+        }
+
+        if (response.items().isEmpty()) return null
+
+        val id = response.items()[0]["id"]?.s() ?: return null
+        return findById(id)
+    }
+
+    /**
+     * Find a book by its Royal Road URL using the GSI
+     */
+    fun findByRoyalRoadUrl(url: String): Book? {
+        val response = dynamoDbClient.query { builder ->
+            builder.tableName(tableName)
+                .indexName("royalRoadUrl-index")
+                .keyConditionExpression("royalRoadUrl = :url")
+                .expressionAttributeValues(mapOf(":url" to AttributeValue.builder().s(url).build()))
+                .limit(1)
+        }
+
+        if (response.items().isEmpty()) return null
+
+        val id = response.items()[0]["id"]?.s() ?: return null
+        return findById(id)
+    }
+
     fun findAll(): List<Book> {
         return booksTable.scan()
             .items()

@@ -71,14 +71,11 @@ class RoyalRoadScraper {
             // Stats - extract from the stats row
             val stats = extractStats(html)
 
-            // Rating - from the rating element
-            val ratingText = findFirstOrNull("span.star[data-content]") { attribute("data-content") }
-                ?: findFirstOrNull("span.star") { attribute("title") }
-            val rating = parseRating(ratingText)
+            // Rating - extract from JSON-LD structured data
+            val rating = extractRatingFromJsonLd(html)
 
-            // Number of ratings
-            val numRatingsText = findFirstOrNull("span.ratings") { text }
-            val numRatings = parseNumRatings(numRatingsText)
+            // Use total views as the popularity metric (instead of rating count)
+            val numRatings = stats.views
 
             ScrapedRoyalRoadBook(
                 title = cleanTitle(title.trim()),
@@ -147,8 +144,8 @@ class RoyalRoadScraper {
             followers = it.groupValues[1].replace(",", "").toIntOrNull() ?: 0
         }
 
-        // Views
-        Regex("""([\d,]+)\s*(?:Total\s+)?Views?""", RegexOption.IGNORE_CASE).find(html)?.let {
+        // Views - look for the value after "Total Views :" label
+        Regex("""Total Views\s*:\s*</li>\s*<li[^>]*>\s*([\d,]+)""", RegexOption.IGNORE_CASE).find(html)?.let {
             views = it.groupValues[1].replace(",", "").toIntOrNull() ?: 0
         }
 
@@ -156,22 +153,12 @@ class RoyalRoadScraper {
     }
 
     /**
-     * Parse rating from text like "4.26" or "4.26 / 5"
+     * Extract rating from JSON-LD structured data
+     * Looks for: "ratingValue":4.26
      */
-    private fun parseRating(text: String?): Double {
-        if (text == null) return 0.0
-        val pattern = Regex("""(\d+\.?\d*)""")
-        return pattern.find(text)?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
-    }
-
-    /**
-     * Parse number of ratings from text like "33 ratings" or "(33)"
-     */
-    private fun parseNumRatings(text: String?): Int {
-        if (text == null) return 0
-        val cleaned = text.replace(",", "")
-        val pattern = Regex("""(\d+)""")
-        return pattern.find(cleaned)?.value?.toIntOrNull() ?: 0
+    private fun extractRatingFromJsonLd(html: String): Double {
+        val ratingPattern = Regex(""""ratingValue"\s*:\s*([\d.]+)""")
+        return ratingPattern.find(html)?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
     }
 
     /**

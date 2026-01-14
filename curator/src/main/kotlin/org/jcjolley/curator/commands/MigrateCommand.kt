@@ -68,7 +68,8 @@ class MigrateCommand(
                 val isFullyMigrated = book.lengthMinutes != null &&
                     book.lengthCategory != null &&
                     book.genre != null &&
-                    book.gsiPartition == "BOOK"
+                    book.gsiPartition == "BOOK" &&
+                    book.source.isNotEmpty()
 
                 if (isFullyMigrated && !force) {
                     echo("${yellow("⊘")} Skipping ${book.title} (already migrated)")
