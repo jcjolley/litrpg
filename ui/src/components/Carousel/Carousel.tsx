@@ -14,11 +14,13 @@ interface CarouselProps {
   triggerSpin?: boolean;
   onSpinStart?: () => void;
   onWishlist?: () => void;
+  onCompleted?: () => void;
   onSpinAgain?: () => void;
   onIgnore?: () => void;
   onCoverClick?: () => void;
   onVote?: (bookId: string, vote: VoteType) => void;
   selectedBookId?: string | null;
+  isCompleted?: boolean; // Whether the selected book is marked as completed
   continuousSpin?: boolean; // When true, spin indefinitely until released
   spinSpeedMultiplier?: number; // Speed modifier (1.0 = normal, 0.5 = 2x faster)
   hasGoldenBorder?: boolean; // Shows golden border effect (completionist achievement)
@@ -32,11 +34,13 @@ export function Carousel({
   triggerSpin,
   onSpinStart,
   onWishlist,
+  onCompleted,
   onSpinAgain,
   onIgnore,
   onCoverClick,
   onVote,
   selectedBookId,
+  isCompleted = false,
   continuousSpin = false,
   spinSpeedMultiplier = 1.0,
   hasGoldenBorder = false,
@@ -258,6 +262,14 @@ export function Carousel({
             type="button"
           >
             {isInWishlist ? 'In Wishlist' : 'Add to Wishlist'}
+          </button>
+          <button
+            className={`${styles.actionButton} ${styles.actionSecondary}`}
+            onClick={onCompleted}
+            disabled={isCompleted}
+            type="button"
+          >
+            {isCompleted ? 'Completed ✓' : 'Mark Complete'}
           </button>
           <button
             className={`${styles.actionButton} ${styles.actionSecondary}`}

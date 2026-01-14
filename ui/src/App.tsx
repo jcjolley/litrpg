@@ -14,6 +14,7 @@ import { useBooks } from './hooks/useBooks';
 import { useWishlist } from './hooks/useWishlist';
 import { useNotInterested } from './hooks/useNotInterested';
 import { useHistory } from './hooks/useHistory';
+import { useCompleted } from './hooks/useCompleted';
 import { useVotes, type VoteType } from './hooks/useVotes';
 import { useAchievements, type Achievement } from './hooks/useAchievements';
 import { useAchievementEffects } from './hooks/useAchievementEffects';
@@ -33,6 +34,7 @@ export default function App() {
   const { wishlist, addToWishlist, removeFromWishlist, count: wishlistCount } = useWishlist();
   const { notInterestedIds, addNotInterested, count: notInterestedCount } = useNotInterested();
   const { history, addToHistory, clearHistory } = useHistory();
+  const { completed, addCompleted, clearCompleted, isCompleted, count: completedCount } = useCompleted();
   const { votes, getVote, setVote } = useVotes();
 
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -120,6 +122,29 @@ export default function App() {
     // Spin again after wishlisting
     setTriggerSpin(true);
   }, [selectedBook, addToWishlist, wishlistCount, unlock, showAchievementNotification]);
+
+  const handleCompleted = useCallback(() => {
+    if (!selectedBook) return;
+
+    addCompleted(selectedBook.id);
+
+    // Check for completion achievements
+    const newCount = completedCount + 1;
+    if (newCount === 1) {
+      showAchievementNotification(unlock('firstCompleted'));
+    } else if (newCount === 5) {
+      showAchievementNotification(unlock('completed5'));
+    } else if (newCount === 10) {
+      showAchievementNotification(unlock('completed10'));
+    } else if (newCount === 20) {
+      showAchievementNotification(unlock('completed20'));
+    } else if (newCount === 50) {
+      showAchievementNotification(unlock('completed50'));
+    }
+
+    // Spin again after marking complete
+    setTriggerSpin(true);
+  }, [selectedBook, addCompleted, completedCount, unlock, showAchievementNotification]);
 
   const handleSpinAgain = useCallback(() => {
     setTriggerSpin(true);
@@ -312,11 +337,13 @@ export default function App() {
             triggerSpin={triggerSpin}
             onSpinStart={handleSpinStart}
             onWishlist={handleWishlist}
+            onCompleted={handleCompleted}
             onSpinAgain={handleSpinAgain}
             onIgnore={handleIgnore}
             onCoverClick={handleCoverClick}
             onVote={handleVote}
             selectedBookId={selectedBook?.id}
+            isCompleted={selectedBook ? isCompleted(selectedBook.id) : false}
             continuousSpin={showOnboarding}
             spinSpeedMultiplier={achievementEffects.spinSpeedMultiplier}
             hasGoldenBorder={achievementEffects.hasGoldenBorder}
@@ -353,8 +380,10 @@ export default function App() {
           isOpen={showHistoryPanel}
           onClose={() => setShowHistoryPanel(false)}
           history={history}
+          completed={completed}
           books={books}
           onClear={clearHistory}
+          onClearCompleted={clearCompleted}
         />
 
         <StatsPanel

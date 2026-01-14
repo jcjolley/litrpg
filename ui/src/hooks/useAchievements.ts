@@ -81,6 +81,36 @@ export const ACHIEVEMENTS: Record<string, Achievement> = {
     effectValue: 0.5,
     themeUnlock: 'crimson-red',
   },
+  firstCompleted: {
+    id: 'firstCompleted',
+    title: 'ACHIEVEMENT UNLOCKED!',
+    subtitle: 'First Conquest',
+    description: 'Completed your first audiobook!',
+  },
+  completed5: {
+    id: 'completed5',
+    title: 'ACHIEVEMENT UNLOCKED!',
+    subtitle: 'Apprentice Reader',
+    description: 'Completed 5 audiobooks',
+  },
+  completed10: {
+    id: 'completed10',
+    title: 'ACHIEVEMENT UNLOCKED!',
+    subtitle: 'Journeyman Reader',
+    description: 'Completed 10 audiobooks',
+  },
+  completed20: {
+    id: 'completed20',
+    title: 'ACHIEVEMENT UNLOCKED!',
+    subtitle: 'Expert Reader',
+    description: 'Completed 20 audiobooks',
+  },
+  completed50: {
+    id: 'completed50',
+    title: 'ACHIEVEMENT UNLOCKED!',
+    subtitle: 'Master Reader',
+    description: 'Completed 50 audiobooks - A true bibliophile!',
+  },
   completionist: {
     id: 'completionist',
     title: 'ACHIEVEMENT UNLOCKED!',
@@ -101,6 +131,11 @@ const COMPLETIONIST_REQUIREMENTS = [
   'picky',
   'explorer',
   'speedReader',
+  'firstCompleted',
+  'completed5',
+  'completed10',
+  'completed20',
+  'completed50',
 ];
 
 interface StoredAchievements {
