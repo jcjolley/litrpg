@@ -102,7 +102,14 @@ See the Terraform section below for full details on AWS deployment.
 
 The app defaults to LocalStack for local development.
 
-**Quick Start (Recommended)**: Use the startup script to launch everything:
+**IMPORTANT**: Always prefer `make` commands over raw `./gradlew` commands for local development. The Makefile handles proper setup and configuration.
+
+**Quick Start (Recommended)**: Use make to start the dev environment:
+```bash
+make dev
+```
+
+**Alternative**: Use the startup scripts:
 ```bash
 # Windows
 ./scripts/dev-start.ps1
@@ -126,7 +133,7 @@ aws dynamodb create-table --endpoint-url http://localhost:4566 \
 ./gradlew :curator:run --args="import data/books.json --dynamo http://localhost:4566"
 
 # 3. Start Quarkus (defaults to LocalStack)
-./gradlew quarkusDev
+make dev  # Preferred over ./gradlew quarkusDev
 
 # 4. Start the UI (in another terminal)
 cd ui && npm run dev

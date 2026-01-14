@@ -1,6 +1,6 @@
 # Makefile for LitRPG project
 
-.PHONY: build-lambda build-ui deploy-ui deploy test clean aws-login stats stats-local
+.PHONY: build-lambda build-ui deploy-ui deploy test clean aws-login stats stats-local add
 
 # Check AWS credentials and login if needed
 aws-login:
@@ -61,3 +61,14 @@ stats: aws-login
 # View analytics stats from local DynamoDB (LocalStack)
 stats-local:
 	./gradlew :curator:run --args="stats --dynamo http://localhost:4566"
+
+# Quick add a book from Audible URL
+# Usage: make add URL=https://www.audible.com/pd/Book-Title/B0XXXXXXXX
+add: aws-login
+	@if [ -z "$(URL)" ]; then \
+		echo "Usage: make add URL=<audible-url>"; \
+		exit 1; \
+	fi
+	eval "$$(aws configure export-credentials --format env)" && \
+		AWS_REGION=us-west-2 \
+		./gradlew :curator:run --args="add -y $(URL)"

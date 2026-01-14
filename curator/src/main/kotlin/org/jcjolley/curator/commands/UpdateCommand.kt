@@ -48,63 +48,71 @@ class UpdateCommand : CliktCommand(name = "update") {
 
             var updatedBook = existingBook.copy(updatedAt = Instant.now())
 
-            // Re-scrape if requested
+            // Re-scrape if requested (Audible only)
             if (rescrape) {
-                echo("Re-scraping Audible page...")
-                val scraper = AudibleScraper()
-                try {
-                    val scraped = scraper.scrapeBook(existingBook.audibleUrl)
-                    updatedBook = updatedBook.copy(
-                        title = scraped.title,
-                        subtitle = scraped.subtitle,
-                        author = scraped.author,
-                        authorUrl = scraped.authorUrl,
-                        series = scraped.series,
-                        seriesPosition = scraped.seriesPosition,
-                        length = scraped.length,
-                        releaseDate = scraped.releaseDate,
-                        language = scraped.language,
-                        imageUrl = scraped.imageUrl,
-                        rating = scraped.rating,
-                        numRatings = scraped.numRatings
-                    )
-                    echo(green("✓") + " Metadata updated from Audible")
-                } finally {
-                    scraper.close()
+                if (existingBook.audibleUrl == null) {
+                    echo(yellow("⚠ Cannot rescrape: not an Audible book"))
+                } else {
+                    echo("Re-scraping Audible page...")
+                    val scraper = AudibleScraper()
+                    try {
+                        val scraped = scraper.scrapeBook(existingBook.audibleUrl)
+                        updatedBook = updatedBook.copy(
+                            title = scraped.title,
+                            subtitle = scraped.subtitle,
+                            author = scraped.author,
+                            authorUrl = scraped.authorUrl,
+                            series = scraped.series,
+                            seriesPosition = scraped.seriesPosition,
+                            length = scraped.length,
+                            releaseDate = scraped.releaseDate,
+                            language = scraped.language,
+                            imageUrl = scraped.imageUrl,
+                            rating = scraped.rating,
+                            numRatings = scraped.numRatings
+                        )
+                        echo(green("✓") + " Metadata updated from Audible")
+                    } finally {
+                        scraper.close()
+                    }
                 }
             }
 
-            // Regenerate description if requested
+            // Regenerate description if requested (Audible only - needs to re-scrape)
             if (regenerate) {
-                echo("Regenerating description via Llama...")
-                val scraper = AudibleScraper()
-                val ollamaClient = OllamaClient(ollamaEndpoint, ollamaModel)
-                val summarizer = LlamaSummarizer(ollamaClient)
+                if (existingBook.audibleUrl == null) {
+                    echo(yellow("⚠ Cannot regenerate: not an Audible book (cannot fetch original description)"))
+                } else {
+                    echo("Regenerating description via Llama...")
+                    val scraper = AudibleScraper()
+                    val ollamaClient = OllamaClient(ollamaEndpoint, ollamaModel)
+                    val summarizer = LlamaSummarizer(ollamaClient)
 
-                try {
-                    // Need to re-scrape to get original description
-                    val scraped = scraper.scrapeBook(existingBook.audibleUrl)
-                    val result = summarizer.summarize(scraped.originalDescription)
+                    try {
+                        // Need to re-scrape to get original description
+                        val scraped = scraper.scrapeBook(existingBook.audibleUrl)
+                        val result = summarizer.summarize(scraped.originalDescription)
 
-                    echo("───────────────────────────────────────────────────")
-                    echo("Old: ${existingBook.description}")
-                    echo("")
-                    echo("New: ${result.blurb}")
-                    echo("───────────────────────────────────────────────────")
+                        echo("───────────────────────────────────────────────────")
+                        echo("Old: ${existingBook.description}")
+                        echo("")
+                        echo("New: ${result.blurb}")
+                        echo("───────────────────────────────────────────────────")
 
-                    echo("")
-                    echo("Accept new description? [y/N] ", trailingNewline = false)
-                    val input = readLine()?.trim()?.lowercase()
+                        echo("")
+                        echo("Accept new description? [y/N] ", trailingNewline = false)
+                        val input = readLine()?.trim()?.lowercase()
 
-                    if (input == "y" || input == "yes") {
-                        updatedBook = updatedBook.copy(description = result.blurb)
-                        echo(green("✓") + " Description updated")
-                    } else {
-                        echo("Description unchanged")
+                        if (input == "y" || input == "yes") {
+                            updatedBook = updatedBook.copy(description = result.blurb)
+                            echo(green("✓") + " Description updated")
+                        } else {
+                            echo("Description unchanged")
+                        }
+                    } finally {
+                        scraper.close()
+                        ollamaClient.close()
                     }
-                } finally {
-                    scraper.close()
-                    ollamaClient.close()
                 }
             }
 
@@ -123,5 +131,6 @@ class UpdateCommand : CliktCommand(name = "update") {
     }
 
     private fun green(text: String) = "\u001B[32m$text\u001B[0m"
+    private fun yellow(text: String) = "\u001B[33m$text\u001B[0m"
     private fun red(text: String) = "\u001B[31m$text\u001B[0m"
 }

@@ -19,16 +19,22 @@ data class Book(
     var narrator: String? = null,
     var series: String? = null,
     var seriesPosition: Int? = null,
-    var length: String = "",
-    var releaseDate: String = "",
+    var length: String? = null,             // Audio length (Audible only)
+    var releaseDate: String? = null,
     var language: String = "English",
     var imageUrl: String = "",
-    var audibleUrl: String = "",
-    var audibleAsin: String = "",
+    // Source-specific fields
+    @get:DynamoDbSecondaryPartitionKey(indexNames = ["source-index"])
+    var source: String = "AUDIBLE",         // "AUDIBLE" or "ROYAL_ROAD"
+    var audibleUrl: String? = null,
+    var audibleAsin: String? = null,
+    var royalRoadUrl: String? = null,
+    var royalRoadId: String? = null,
     @get:DynamoDbSecondarySortKey(indexNames = ["author-index", "length-index"])
     var rating: Double = 0.0,
     @get:DynamoDbSecondarySortKey(indexNames = ["genre-index", "popularity-index"])
     var numRatings: Int = 0,
+    var pageCount: Int? = null,             // Royal Road page count
     var description: String = "",
     var wishlistCount: Int = 0,
     var clickThroughCount: Int = 0,

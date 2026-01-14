@@ -24,8 +24,10 @@ object LengthParser {
      * - Medium: 6-12 hours (360-720 mins)
      * - Long: 12-24 hours (720-1440 mins)
      * - Epic: 24+ hours (1440+ mins)
+     * Returns null if minutes is null (e.g., for Royal Road books)
      */
-    fun computeCategory(minutes: Int): String = when {
+    fun computeCategory(minutes: Int?): String? = when {
+        minutes == null -> null
         minutes < 360 -> "Short"
         minutes < 720 -> "Medium"
         minutes < 1440 -> "Long"

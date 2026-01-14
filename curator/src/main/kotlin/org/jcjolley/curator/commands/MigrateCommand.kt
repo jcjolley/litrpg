@@ -78,17 +78,17 @@ class MigrateCommand(
 
                 echo("Processing: ${book.title}")
 
-                // Always compute length fields from existing length string
-                val lengthMinutes = LengthParser.parseToMinutes(book.length)
+                // Always compute length fields from existing length string (Audible only)
+                val lengthMinutes = book.length?.let { LengthParser.parseToMinutes(it) }
                 val lengthCategory = LengthParser.computeCategory(lengthMinutes)
 
                 var genre = book.genre
 
-                // Re-extract via LLM if needed and not skipping
-                if (!skipLlm && scraper != null && summarizer != null && genre == null) {
+                // Re-extract via LLM if needed and not skipping (Audible only)
+                if (!skipLlm && scraper != null && summarizer != null && genre == null && book.audibleUrl != null) {
                     try {
                         echo("  Fetching from Audible...")
-                        val scraped = scraper.scrapeBook(book.audibleUrl)
+                        val scraped = scraper.scrapeBook(book.audibleUrl!!)
                         echo("  Extracting facts via LLM...")
                         val result = summarizer.summarize(scraped.originalDescription)
                         genre = result.facts.genre

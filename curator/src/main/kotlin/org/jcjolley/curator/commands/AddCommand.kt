@@ -12,17 +12,19 @@ import org.jcjolley.curator.llm.SummarizationResult
 import org.jcjolley.curator.model.Book
 import org.jcjolley.curator.model.BookFacts
 import org.jcjolley.curator.model.ScrapedBook
+import org.jcjolley.curator.model.ScrapedRoyalRoadBook
 import org.jcjolley.curator.repository.BookRepository
 import org.jcjolley.curator.scraper.AudibleScraper
+import org.jcjolley.curator.scraper.RoyalRoadScraper
 import org.jcjolley.curator.util.LengthParser
 import java.time.Instant
 import java.util.*
 
 class AddCommand : CliktCommand(name = "add") {
     override fun help(context: com.github.ajalt.clikt.core.Context) =
-        "Add a book to the catalog by Audible URL"
+        "Add a book to the catalog by Audible or Royal Road URL"
 
-    private val url by argument(help = "Audible product page URL")
+    private val url by argument(help = "Audible or Royal Road URL")
 
     private val interactive by option("-i", "--interactive", "--no-interactive", help = "Interactive mode for review/edit")
         .flag("--no-interactive", default = true)
@@ -38,11 +40,23 @@ class AddCommand : CliktCommand(name = "add") {
 
     private val dynamoEndpoint by option("--dynamo", help = "DynamoDB endpoint (local testing)")
 
+    private enum class Source { AUDIBLE, ROYAL_ROAD }
+
+    private fun detectSource(url: String): Source {
+        return when {
+            url.contains("audible.com") -> Source.AUDIBLE
+            url.contains("royalroad.com") -> Source.ROYAL_ROAD
+            else -> throw IllegalArgumentException("Unsupported URL. Must be from audible.com or royalroad.com")
+        }
+    }
+
     override fun run() = runBlocking {
         echo("Adding book from: $url")
         echo("")
 
-        val scraper = AudibleScraper()
+        val source = detectSource(url)
+        val audibleScraper = if (source == Source.AUDIBLE) AudibleScraper() else null
+        val royalRoadScraper = if (source == Source.ROYAL_ROAD) RoyalRoadScraper() else null
         val ollamaClient = OllamaClient(ollamaEndpoint, ollamaModel)
         val summarizer = LlamaSummarizer(ollamaClient)
         val repository = BookRepository(dynamoEndpoint)
@@ -53,41 +67,75 @@ class AddCommand : CliktCommand(name = "add") {
                 repository.createTableIfNotExists()
             }
 
-            // Step 1: Scrape Audible page
-            echo("Scraping Audible page...")
-            val scraped = scraper.scrapeBook(url)
-            displayScrapedInfo(scraped)
+            // Step 1: Scrape the page based on source
+            val originalDescription: String
+            val book: Book
 
-            // Step 2: Generate description via Llama
-            echo("")
-            echo("Generating description via Llama...")
-            var result = summarizer.summarize(scraped.originalDescription)
-            displaySummarizationResult(result)
+            when (source) {
+                Source.AUDIBLE -> {
+                    echo("Scraping Audible page...")
+                    val scraped = audibleScraper!!.scrapeBook(url)
+                    displayScrapedAudibleInfo(scraped)
+                    originalDescription = scraped.originalDescription
 
-            // Step 3: Interactive review (if enabled and not auto-accept)
-            var finalDescription = result.blurb
-            var finalFacts = result.facts
-            if (interactive && !autoAccept) {
-                val reviewResult = interactiveReviewWithFacts(result, summarizer, scraped.originalDescription)
-                finalDescription = reviewResult.first
-                finalFacts = reviewResult.second
+                    // Step 2: Generate description via Llama
+                    echo("")
+                    echo("Generating description via Llama...")
+                    var result = summarizer.summarize(originalDescription)
+                    displaySummarizationResult(result)
+
+                    // Step 3: Interactive review (if enabled and not auto-accept)
+                    var finalDescription = result.blurb
+                    var finalFacts = result.facts
+                    if (interactive && !autoAccept) {
+                        val reviewResult = interactiveReviewWithFacts(result, summarizer, originalDescription)
+                        finalDescription = reviewResult.first
+                        finalFacts = reviewResult.second
+                    }
+
+                    book = createAudibleBook(scraped, finalDescription, finalFacts)
+                }
+
+                Source.ROYAL_ROAD -> {
+                    echo("Scraping Royal Road page...")
+                    val scraped = royalRoadScraper!!.scrapeBook(url)
+                    displayScrapedRoyalRoadInfo(scraped)
+                    originalDescription = scraped.originalDescription
+
+                    // Step 2: Generate description via Llama
+                    echo("")
+                    echo("Generating description via Llama...")
+                    var result = summarizer.summarize(originalDescription)
+                    displaySummarizationResult(result)
+
+                    // Step 3: Interactive review (if enabled and not auto-accept)
+                    var finalDescription = result.blurb
+                    var finalFacts = result.facts
+                    if (interactive && !autoAccept) {
+                        val reviewResult = interactiveReviewWithFacts(result, summarizer, originalDescription)
+                        finalDescription = reviewResult.first
+                        finalFacts = reviewResult.second
+                    }
+
+                    book = createRoyalRoadBook(scraped, finalDescription, finalFacts)
+                }
             }
 
-            // Step 4: Create and save book
-            val book = createBook(scraped, finalDescription, finalFacts)
+            // Step 4: Save book
             repository.save(book)
 
             echo("")
             echo(green("✓ Book added to catalog (ID: ${book.id})"))
 
         } finally {
-            scraper.close()
+            audibleScraper?.close()
+            royalRoadScraper?.close()
             ollamaClient.close()
             repository.close()
         }
     }
 
-    private fun displayScrapedInfo(scraped: ScrapedBook) {
+    private fun displayScrapedAudibleInfo(scraped: ScrapedBook) {
         echo(green("✓") + " Title: ${scraped.title}")
         if (scraped.subtitle != null) {
             echo(green("✓") + " Subtitle: ${scraped.subtitle}")
@@ -103,6 +151,19 @@ class AddCommand : CliktCommand(name = "add") {
         echo(green("✓") + " Rating: ${scraped.rating} (${formatNumber(scraped.numRatings)} ratings)")
         echo(green("✓") + " Length: ${scraped.length}")
         echo(green("✓") + " ASIN: ${scraped.audibleAsin}")
+    }
+
+    private fun displayScrapedRoyalRoadInfo(scraped: ScrapedRoyalRoadBook) {
+        echo(green("✓") + " Title: ${scraped.title}")
+        echo(green("✓") + " Author: ${scraped.author}")
+        echo(green("✓") + " Rating: ${scraped.rating} (${formatNumber(scraped.numRatings)} ratings)")
+        echo(green("✓") + " Pages: ${formatNumber(scraped.pageCount)}")
+        echo(green("✓") + " Chapters: ${formatNumber(scraped.chapterCount)}")
+        echo(green("✓") + " Followers: ${formatNumber(scraped.followers)}")
+        if (scraped.tags.isNotEmpty()) {
+            echo(green("✓") + " Tags: ${scraped.tags.take(5).joinToString(", ")}")
+        }
+        echo(green("✓") + " ID: ${scraped.royalRoadId}")
     }
 
     private fun displaySummarizationResult(result: SummarizationResult) {
@@ -165,7 +226,7 @@ class AddCommand : CliktCommand(name = "add") {
         }
     }
 
-    private fun createBook(scraped: ScrapedBook, description: String, facts: BookFacts): Book {
+    private fun createAudibleBook(scraped: ScrapedBook, description: String, facts: BookFacts): Book {
         val now = Instant.now()
         val lengthMinutes = LengthParser.parseToMinutes(scraped.length)
         val lengthCategory = LengthParser.computeCategory(lengthMinutes)
@@ -183,6 +244,7 @@ class AddCommand : CliktCommand(name = "add") {
             releaseDate = scraped.releaseDate,
             language = scraped.language,
             imageUrl = scraped.imageUrl,
+            source = "AUDIBLE",
             audibleUrl = scraped.audibleUrl,
             audibleAsin = scraped.audibleAsin,
             rating = scraped.rating,
@@ -192,6 +254,29 @@ class AddCommand : CliktCommand(name = "add") {
             genre = facts.genre,
             lengthMinutes = lengthMinutes,
             lengthCategory = lengthCategory,
+            addedAt = now,
+            updatedAt = now
+        )
+    }
+
+    private fun createRoyalRoadBook(scraped: ScrapedRoyalRoadBook, description: String, facts: BookFacts): Book {
+        val now = Instant.now()
+
+        return Book(
+            id = UUID.randomUUID().toString(),
+            title = scraped.title,
+            author = scraped.author,
+            authorUrl = scraped.authorUrl,
+            imageUrl = scraped.imageUrl,
+            source = "ROYAL_ROAD",
+            royalRoadUrl = scraped.royalRoadUrl,
+            royalRoadId = scraped.royalRoadId,
+            rating = scraped.rating,
+            numRatings = scraped.numRatings,
+            pageCount = scraped.pageCount,
+            description = description,
+            // GSI filter fields
+            genre = facts.genre,
             addedAt = now,
             updatedAt = now
         )

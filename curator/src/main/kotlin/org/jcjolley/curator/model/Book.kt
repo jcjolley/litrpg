@@ -14,16 +14,22 @@ data class Book(
     val narrator: String? = null,
     val series: String? = null,
     val seriesPosition: Int? = null,
-    val length: String,
-    val releaseDate: String,
+    val length: String? = null,             // Audio length (Audible only)
+    val releaseDate: String? = null,
     val language: String = "English",
     val imageUrl: String,
-    val audibleUrl: String,
-    val audibleAsin: String,
 
-    // Audible metrics (scraped)
+    // Source-specific URLs (one will be set based on source)
+    val source: String = "AUDIBLE",         // "AUDIBLE" or "ROYAL_ROAD"
+    val audibleUrl: String? = null,
+    val audibleAsin: String? = null,
+    val royalRoadUrl: String? = null,
+    val royalRoadId: String? = null,
+
+    // Source metrics (scraped)
     val rating: Double,
     val numRatings: Int,
+    val pageCount: Int? = null,             // Royal Road page count
 
     // Original content (generated via Llama)
     val description: String,
@@ -36,7 +42,7 @@ data class Book(
 
     // Filter/GSI fields
     val genre: String? = null,              // e.g., "Cultivation", "System Apocalypse", "Time Loop"
-    val lengthMinutes: Int? = null,         // Parsed from length string
+    val lengthMinutes: Int? = null,         // Parsed from length string (Audible)
     val lengthCategory: String? = null,     // Short/Medium/Long/Epic
     val gsiPartition: String = "BOOK",      // Fixed partition key for popularity GSI
 
@@ -68,6 +74,27 @@ data class ScrapedBook(
     val rating: Double,
     val numRatings: Int,
     val originalDescription: String  // Audible's description, used to generate our summary
+)
+
+/**
+ * Raw scraped data from Royal Road before Llama processing
+ */
+@Serializable
+data class ScrapedRoyalRoadBook(
+    val title: String,
+    val author: String,
+    val authorUrl: String?,
+    val tags: List<String>,
+    val pageCount: Int,
+    val chapterCount: Int,
+    val followers: Int,
+    val views: Int,
+    val imageUrl: String,
+    val royalRoadUrl: String,
+    val royalRoadId: String,
+    val rating: Double,
+    val numRatings: Int,
+    val originalDescription: String
 )
 
 /**

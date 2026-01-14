@@ -151,7 +151,14 @@ export default function App() {
       console.error('Failed to record click:', err);
     }
 
-    window.open(getAffiliateUrl(selectedBook.audibleUrl), '_blank');
+    // Use appropriate URL based on book source
+    const url = selectedBook.source === 'ROYAL_ROAD'
+      ? selectedBook.royalRoadUrl
+      : getAffiliateUrl(selectedBook.audibleUrl ?? '');
+
+    if (url) {
+      window.open(url, '_blank');
+    }
   }, [selectedBook]);
 
   // Onboarding handlers

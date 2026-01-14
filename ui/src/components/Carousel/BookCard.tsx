@@ -51,7 +51,9 @@ export function BookCard({
             ★ {book.rating.toFixed(1)} ({book.numRatings.toLocaleString()})
           </span>
           <span className={styles.cardLargeStat}>
-            ⏱ {book.length}
+            {book.source === 'ROYAL_ROAD'
+              ? `📄 ${book.pageCount?.toLocaleString() ?? '?'} pages`
+              : `⏱ ${book.length ?? 'N/A'}`}
           </span>
         </div>
 
@@ -61,8 +63,14 @@ export function BookCard({
           className={styles.cardLargeHint}
           style={{ visibility: isInteractive ? 'visible' : 'hidden' }}
         >
-          <span>View on Audible</span>
-          <span className={styles.cardLargeHintSubtitle}>(Affiliate Link)</span>
+          {book.source === 'ROYAL_ROAD' ? (
+            <span>View on Royal Road</span>
+          ) : (
+            <>
+              <span>View on Audible</span>
+              <span className={styles.cardLargeHintSubtitle}>(Affiliate Link)</span>
+            </>
+          )}
         </div>
       </div>
     </div>

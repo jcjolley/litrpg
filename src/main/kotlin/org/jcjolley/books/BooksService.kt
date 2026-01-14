@@ -77,6 +77,7 @@ class BooksService(
         genre: String? = null,
         popularity: String? = null,  // "popular" or "niche"
         length: String? = null,       // "Short", "Medium", "Long", "Epic"
+        source: String? = null,       // "AUDIBLE" or "ROYAL_ROAD"
         limit: Int = 50
     ): List<Book> {
         // Fetch more than limit to allow for in-memory filtering
@@ -106,6 +107,11 @@ class BooksService(
             if (narrator != null) filtered = filtered.filter { it.narrator == narrator }
             if (genre != null) filtered = filtered.filter { it.genre == genre }
             if (length != null) filtered = filtered.filter { it.lengthCategory == length }
+        }
+
+        // Apply source filter (always, since no GSI for source yet)
+        if (source != null) {
+            filtered = filtered.filter { it.source.equals(source, ignoreCase = true) }
         }
 
         // Apply popularity sorting if specified (and wasn't the primary query)

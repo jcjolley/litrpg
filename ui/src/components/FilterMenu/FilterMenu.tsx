@@ -40,13 +40,19 @@ const POPULARITY = [
   { value: 'niche', label: 'HIDDEN GEMS' },
 ];
 
+const SOURCES = [
+  { value: '', label: 'ALL' },
+  { value: 'AUDIBLE', label: 'AUDIOBOOKS' },
+  { value: 'ROYAL_ROAD', label: 'WEB FICTION' },
+];
+
 interface FilterMenuProps {
   filters: BookFilters;
   onFiltersChange: (filters: BookFilters) => void;
   disabled?: boolean;
 }
 
-type FilterRow = 'author' | 'narrator' | 'genre' | 'length' | 'popularity';
+type FilterRow = 'source' | 'author' | 'narrator' | 'genre' | 'length' | 'popularity';
 
 export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuProps) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -128,11 +134,17 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
     return pop?.label || 'ANY';
   };
 
-  const hasActiveFilters = filters.author || filters.narrator || filters.genre || filters.length || filters.popularity;
+  const getSourceLabel = () => {
+    const source = SOURCES.find(s => s.value === filters.source);
+    return source?.label || 'ALL';
+  };
+
+  const hasActiveFilters = filters.author || filters.narrator || filters.genre || filters.length || filters.popularity || filters.source;
 
   // Build summary text
   const getSummaryText = () => {
     const parts: string[] = [];
+    if (filters.source) parts.push(getSourceLabel());
     if (filters.author) parts.push(filters.author);
     if (filters.narrator) parts.push(filters.narrator);
     if (filters.genre) parts.push(getGenreLabel());
@@ -163,6 +175,13 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
           <div className={styles.menuContainer}>
             {/* Left side: Filter categories */}
             <div className={styles.categories}>
+              <button
+                className={`${styles.categoryRow} ${activeRow === 'source' ? styles.activeRow : ''}`}
+                onClick={() => handleRowClick('source')}
+              >
+                <span className={styles.cursor}>{activeRow === 'source' ? '\u25B6' : ' '}</span>
+                <span className={styles.categoryLabel}>SOURCE</span>
+              </button>
               <button
                 className={`${styles.categoryRow} ${activeRow === 'author' ? styles.activeRow : ''}`}
                 onClick={() => handleRowClick('author')}
@@ -205,6 +224,19 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
 
             {/* Right side: Options for selected category */}
             <div className={styles.options}>
+              {activeRow === 'source' && (
+                <div className={styles.optionsList}>
+                  {SOURCES.map(source => (
+                    <button
+                      key={source.value}
+                      className={`${styles.optionItem} ${filters.source === source.value || (!filters.source && source.value === '') ? styles.selected : ''}`}
+                      onClick={() => handleFilterChange('source', source.value)}
+                    >
+                      {source.label}
+                    </button>
+                  ))}
+                </div>
+              )}
               {activeRow === 'author' && (
                 <div className={styles.searchContainer}>
                   <input

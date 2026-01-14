@@ -40,7 +40,12 @@ export function HistoryPanel({
   }, [history, books]);
 
   const handleBookClick = (book: Book) => {
-    window.open(getAffiliateUrl(book.audibleUrl), '_blank');
+    const url = book.source === 'ROYAL_ROAD'
+      ? book.royalRoadUrl
+      : getAffiliateUrl(book.audibleUrl ?? '');
+    if (url) {
+      window.open(url, '_blank');
+    }
   };
 
   if (!isOpen) return null;

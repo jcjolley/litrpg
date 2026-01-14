@@ -18,6 +18,7 @@ class RetrieveBooksResource(val booksService: BooksService) {
         @QueryParam("genre") genre: String?,
         @QueryParam("popularity") popularity: String?,  // "popular" or "niche"
         @QueryParam("length") length: String?,          // "Short", "Medium", "Long", "Epic"
+        @QueryParam("source") source: String?,          // "AUDIBLE" or "ROYAL_ROAD"
         @QueryParam("limit") @DefaultValue("50") limit: Int
     ): List<Book> {
         // Use combined query - supports multiple filters
@@ -27,6 +28,7 @@ class RetrieveBooksResource(val booksService: BooksService) {
             genre = genre,
             popularity = popularity,
             length = length,
+            source = source,
             limit = limit
         )
     }

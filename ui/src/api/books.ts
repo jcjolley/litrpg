@@ -7,6 +7,7 @@ export interface BookFilters {
   genre?: string;
   length?: string;
   popularity?: string;
+  source?: string;  // "AUDIBLE" or "ROYAL_ROAD"
   limit?: number;
 }
 
@@ -18,6 +19,7 @@ export async function getBooks(filters?: BookFilters): Promise<Book[]> {
   if (filters?.genre) params.set('genre', filters.genre);
   if (filters?.length) params.set('length', filters.length);
   if (filters?.popularity) params.set('popularity', filters.popularity);
+  if (filters?.source) params.set('source', filters.source);
   if (filters?.limit) params.set('limit', filters.limit.toString());
 
   const queryString = params.toString();

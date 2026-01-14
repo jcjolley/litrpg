@@ -79,6 +79,13 @@ class RefreshCommand : CliktCommand(name = "refresh") {
             for ((index, book) in booksToRefresh.withIndex()) {
                 echo("[${index + 1}/${booksToRefresh.size}] ${book.title}")
 
+                // Skip non-Audible books
+                if (book.audibleUrl == null) {
+                    echo("  ${yellow("⚠")} Skipped (not an Audible book)")
+                    skipped++
+                    continue
+                }
+
                 try {
                     // Re-scrape the book from Audible
                     val scraped = scraper.scrapeBook(book.audibleUrl)
