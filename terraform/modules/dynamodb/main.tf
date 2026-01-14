@@ -21,6 +21,11 @@ resource "aws_dynamodb_table" "books" {
   }
 
   attribute {
+    name = "source"
+    type = "S"
+  }
+
+  attribute {
     name = "gsiPartition"
     type = "S"
   }
@@ -82,6 +87,14 @@ resource "aws_dynamodb_table" "books" {
   global_secondary_index {
     name            = "narrator-index"
     hash_key        = "narrator"
+    range_key       = "rating"
+    projection_type = "ALL"
+  }
+
+  # GSI 6: Query by source (AUDIBLE or ROYAL_ROAD), sorted by rating
+  global_secondary_index {
+    name            = "source-index"
+    hash_key        = "source"
     range_key       = "rating"
     projection_type = "ALL"
   }

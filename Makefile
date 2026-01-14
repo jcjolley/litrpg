@@ -13,7 +13,7 @@ aws-login:
 
 # Build native Lambda function for AWS deployment
 build-lambda:
-	./gradlew build -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true -x test
+	gradlew build -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true -x test
 
 # Build UI for production
 build-ui:
@@ -40,11 +40,11 @@ deploy: build-lambda build-ui deploy-infra deploy-ui
 
 # Run all tests
 test:
-	./gradlew test
+	gradlew test
 
 # Clean build artifacts
 clean:
-	./gradlew clean
+	gradlew clean
 	rm -rf ui/dist
 
 # Local development: start Quarkus and UI dev servers
@@ -56,11 +56,11 @@ dev:
 stats: aws-login
 	eval "$$(aws configure export-credentials --format env)" && \
 		AWS_REGION=us-west-2 \
-		./gradlew :curator:run --args="stats"
+		gradlew :curator:run --args="stats"
 
 # View analytics stats from local DynamoDB (LocalStack)
 stats-local:
-	./gradlew :curator:run --args="stats --dynamo http://localhost:4566"
+	gradlew :curator:run --args="stats --dynamo http://localhost:4566"
 
 # Quick add a book from Audible URL
 # Usage: make add URL=https://www.audible.com/pd/Book-Title/B0XXXXXXXX
@@ -71,4 +71,4 @@ add: aws-login
 	fi
 	eval "$$(aws configure export-credentials --format env)" && \
 		AWS_REGION=us-west-2 \
-		./gradlew :curator:run --args="add -y $(URL)"
+		gradlew :curator:run --args="add -y $(URL)"
