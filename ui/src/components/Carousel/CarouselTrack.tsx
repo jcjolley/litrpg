@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import type { Book } from '../../types/book';
 import type { VoteType } from '../../hooks/useVotes';
 import { BookCard } from './BookCard';
@@ -11,6 +10,8 @@ interface CarouselTrackProps {
   spinning: boolean;
   userWishlist: string[];
   userVotes: { [bookId: string]: VoteType };
+  containerWidth: number;
+  containerHeight: number;
   onCoverClick?: () => void;
   onCardClick?: (index: number) => void;
   onVote?: (bookId: string, vote: VoteType) => void;
@@ -24,35 +25,23 @@ const SELECTION_RADIANS = (SELECTION_ANGLE * Math.PI) / 180;
 const MIN_SCALE = 0.28;
 const MAX_SCALE = 1.0;
 
-// Breakpoint for mobile
-const MOBILE_BREAKPOINT = 768;
+// Visibility range - cards visible from -20 to 120 degrees
+const VISIBLE_START = -20;
+const VISIBLE_END = 120;
+// Buffer for smooth transitions during spin
+const VISIBILITY_BUFFER = 30;
 
-function useResponsiveWheel() {
-  const [dimensions, setDimensions] = useState(() => {
-    if (typeof window === 'undefined') {
-      return { isMobile: false, vh: 10, vw: 10 };
-    }
-    return {
-      isMobile: window.innerWidth <= MOBILE_BREAKPOINT,
-      vh: window.innerHeight / 100,
-      vw: window.innerWidth / 100,
-    };
-  });
+// Helper to get effective angle (handles wrap-around)
+function getEffectiveAngle(normalizedAngle: number): number {
+  return normalizedAngle > 300 ? normalizedAngle - 360 : normalizedAngle;
+}
 
-  useEffect(() => {
-    const handleResize = () => {
-      setDimensions({
-        isMobile: window.innerWidth <= MOBILE_BREAKPOINT,
-        vh: window.innerHeight / 100,
-        vw: window.innerWidth / 100,
-      });
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  return dimensions;
+// Check if a card should be rendered based on its angle
+function isCardVisible(cardAngle: number): boolean {
+  const normalizedAngle = ((cardAngle % 360) + 360) % 360;
+  const effectiveAngle = getEffectiveAngle(normalizedAngle);
+  return effectiveAngle >= VISIBLE_START - VISIBILITY_BUFFER &&
+         effectiveAngle <= VISIBLE_END + VISIBILITY_BUFFER;
 }
 
 export function CarouselTrack({
@@ -62,25 +51,31 @@ export function CarouselTrack({
   spinning,
   userWishlist,
   userVotes,
+  containerWidth,
+  containerHeight,
   onCoverClick,
   onCardClick,
   onVote,
 }: CarouselTrackProps) {
   const anglePerItem = 360 / books.length;
-  const { isMobile, vh } = useResponsiveWheel();
 
-  // Wheel radius adapts to screen size - smaller on mobile
-  const wheelRadiusVh = isMobile ? 55 : 80;
-  const wheelRadius = wheelRadiusVh * vh;
+  // Calculate wheel radius based on container size (smaller dimension determines radius)
+  // Use a percentage of the container to ensure the wheel fits
+  const containerMin = Math.min(containerWidth, containerHeight);
+  const wheelRadius = containerMin * 0.7; // 70% of smaller dimension
 
-  // Position wheel center so that a card at SELECTION_ANGLE lands at viewport center
-  const wheelCenterX = -wheelRadiusVh * Math.cos(SELECTION_RADIANS) * vh;
-  const wheelCenterY = -wheelRadiusVh * Math.sin(SELECTION_RADIANS) * vh;
+  // Position wheel center so that a card at SELECTION_ANGLE lands at container center
+  const wheelCenterX = -wheelRadius * Math.cos(SELECTION_RADIANS);
+  const wheelCenterY = -wheelRadius * Math.sin(SELECTION_RADIANS);
+
+  // Pre-filter to only render visible cards (plus buffer for transitions)
+  const visibleCards = books
+    .map((book, index) => ({ book, index, cardAngle: angle + index * anglePerItem }))
+    .filter(({ cardAngle }) => isCardVisible(cardAngle));
 
   return (
     <div className={styles.track}>
-      {books.map((book, index) => {
-        const cardAngle = angle + index * anglePerItem;
+      {visibleCards.map(({ book, index, cardAngle }) => {
         const radians = (cardAngle * Math.PI) / 180;
 
         const x = wheelCenterX + wheelRadius * Math.cos(radians);
@@ -88,20 +83,15 @@ export function CarouselTrack({
 
         // Normalize angle
         const normalizedAngle = ((cardAngle % 360) + 360) % 360;
+        const effectiveAngle = getEffectiveAngle(normalizedAngle);
 
-        // Fade in/out - cards visible from -20 to 120 degrees
+        // Fade in/out constants
         const FADE_IN_START = -20;
         const FADE_IN_END = 10;
         const FADE_OUT_START = 90;
         const FADE_OUT_END = 120;
 
         let opacity = 0;
-        // Handle wrap-around near 360/0 boundary
-        let effectiveAngle = normalizedAngle;
-        if (normalizedAngle > 300) {
-          effectiveAngle = normalizedAngle - 360;
-        }
-
         if (effectiveAngle >= FADE_IN_START && effectiveAngle < FADE_IN_END) {
           opacity = (effectiveAngle - FADE_IN_START) / (FADE_IN_END - FADE_IN_START);
         } else if (effectiveAngle >= FADE_IN_END && effectiveAngle <= FADE_OUT_START) {

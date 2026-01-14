@@ -1,8 +1,11 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { Book } from '../types/book';
 import { getBooks, type BookFilters, type CategoryFilters, EMPTY_FILTERS, getFilterValues } from '../api/books';
 
 const FILTERS_KEY = 'litrpg-filters';
+
+// Pool management constants
+const POOL_SIZE = 30;              // Books per fetch
 
 // Migrate old single-value filters to new tri-state format
 function migrateOldFilters(stored: unknown): BookFilters {
@@ -110,6 +113,11 @@ interface UseBooksResult {
   filters: BookFilters;
   setFilters: (filters: BookFilters) => void;
   refetch: () => Promise<void>;
+  // Pool management
+  refillPool: () => Promise<void>;
+  spinCount: number;
+  incrementSpinCount: () => void;
+  isRefilling: boolean;
 }
 
 export function useBooks(): UseBooksResult {
@@ -118,11 +126,16 @@ export function useBooks(): UseBooksResult {
   const [error, setError] = useState<Error | null>(null);
   const [filters, setFilters] = useState<BookFilters>(loadStoredFilters);
 
+  // Pool management state
+  const [spinCount, setSpinCount] = useState(0);
+  const [isRefilling, setIsRefilling] = useState(false);
+  const isRefillingRef = useRef(false); // Ref to prevent race conditions
+
   const fetchBooks = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getBooks();
+      const data = await getBooks({ limit: POOL_SIZE });
       setAllBooks(data);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch books'));
@@ -148,5 +161,48 @@ export function useBooks(): UseBooksResult {
     await fetchBooks();
   }, [fetchBooks]);
 
-  return { books, allBooks, loading, error, filters, setFilters: handleSetFilters, refetch };
+  // Pool management: refill with new books (deduped, appended to end)
+  const refillPool = useCallback(async () => {
+    // Prevent concurrent fetches using ref for synchronous check
+    if (isRefillingRef.current) return;
+    isRefillingRef.current = true;
+    setIsRefilling(true);
+
+    try {
+      const newBooks = await getBooks({ limit: POOL_SIZE });
+
+      setAllBooks((prev) => {
+        // Keep existing books, append new ones (dedupe by ID)
+        const existingIds = new Set(prev.map((b) => b.id));
+        const uniqueNew = newBooks.filter((b) => !existingIds.has(b.id));
+        return [...prev, ...uniqueNew];
+      });
+
+      // Reset spin counter after refill
+      setSpinCount(0);
+    } catch (err) {
+      console.error('Failed to refill book pool:', err);
+    } finally {
+      isRefillingRef.current = false;
+      setIsRefilling(false);
+    }
+  }, []);
+
+  const incrementSpinCount = useCallback(() => {
+    setSpinCount((prev) => prev + 1);
+  }, []);
+
+  return {
+    books,
+    allBooks,
+    loading,
+    error,
+    filters,
+    setFilters: handleSetFilters,
+    refetch,
+    refillPool,
+    spinCount,
+    incrementSpinCount,
+    isRefilling,
+  };
 }

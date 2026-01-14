@@ -111,6 +111,14 @@ export const ACHIEVEMENTS: Record<string, Achievement> = {
     subtitle: 'Master Reader',
     description: 'Completed 50 audiobooks - A true bibliophile!',
   },
+  konami: {
+    id: 'konami',
+    title: 'ACHIEVEMENT UNLOCKED!',
+    subtitle: 'Classic Gamer',
+    description: 'Entered the Konami code',
+    effect: 'Retro mode unlocked',
+    effectType: 'feature',
+  },
   completionist: {
     id: 'completionist',
     title: 'ACHIEVEMENT UNLOCKED!',
@@ -136,6 +144,7 @@ const COMPLETIONIST_REQUIREMENTS = [
   'completed10',
   'completed20',
   'completed50',
+  'konami',
 ];
 
 interface StoredAchievements {

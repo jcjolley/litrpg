@@ -6,6 +6,30 @@ import { useCarouselSpin } from '../../hooks/useCarouselSpin';
 import { useWeightedSelection } from '../../hooks/useWeightedSelection';
 import styles from './Carousel.module.css';
 
+// Hook to observe container dimensions
+function useContainerSize(ref: React.RefObject<HTMLElement | null>) {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    if (!ref.current) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        setSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [ref]);
+
+  return size;
+}
+
 interface CarouselProps {
   books: Book[];
   userWishlist: string[];
@@ -47,6 +71,8 @@ export function Carousel({
 }: CarouselProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const { selectBook, getTargetIndex } = useWeightedSelection();
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const containerSize = useContainerSize(viewportRef);
 
   const handleSpinComplete = useCallback(
     (targetIndex: number) => {
@@ -232,6 +258,7 @@ export function Carousel({
   return (
     <div className={containerClasses}>
       <div
+        ref={viewportRef}
         className={styles.viewport}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -246,6 +273,8 @@ export function Carousel({
           spinning={spinState === 'spinning' || spinState === 'continuous' || spinState === 'nudging'}
           userWishlist={userWishlist}
           userVotes={userVotes}
+          containerWidth={containerSize.width}
+          containerHeight={containerSize.height}
           onCoverClick={onCoverClick}
           onCardClick={handleCardClick}
           onVote={onVote}

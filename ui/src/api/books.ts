@@ -26,8 +26,17 @@ export const EMPTY_FILTERS: BookFilters = {
   source: {},
 };
 
-export async function getBooks(): Promise<Book[]> {
-  return fetchApi<Book[]>('/books');
+export interface GetBooksOptions {
+  limit?: number;
+}
+
+export async function getBooks(options: GetBooksOptions = {}): Promise<Book[]> {
+  const params = new URLSearchParams();
+  if (options.limit) {
+    params.set('limit', options.limit.toString());
+  }
+  const query = params.toString();
+  return fetchApi<Book[]>(query ? `/books?${query}` : '/books');
 }
 
 // Helper to get values with a specific filter state

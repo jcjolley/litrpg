@@ -34,7 +34,9 @@ class ExportCommand : CliktCommand(name = "export") {
             val jsonOutput = json.encodeToString(books)
 
             if (output != null) {
-                File(output!!).writeText(jsonOutput)
+                val outputFile = File(output!!)
+                outputFile.parentFile?.mkdirs()
+                outputFile.writeText(jsonOutput)
                 echo("Exported ${books.size} book(s) to $output")
             } else {
                 echo(jsonOutput)

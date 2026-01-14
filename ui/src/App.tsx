@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { Carousel } from './components/Carousel';
 import { OnboardingDialog } from './components/OnboardingDialog';
@@ -9,6 +9,7 @@ import { WishlistPanel } from './components/WishlistPanel';
 import { RemortDialog } from './components/RemortDialog';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { HistoryPanel } from './components/HistoryPanel';
+import { SettingsPanel } from './components/SettingsPanel';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useBooks } from './hooks/useBooks';
 import { useWishlist } from './hooks/useWishlist';
@@ -16,11 +17,25 @@ import { useNotInterested } from './hooks/useNotInterested';
 import { useHistory } from './hooks/useHistory';
 import { useCompleted } from './hooks/useCompleted';
 import { useVotes, type VoteType } from './hooks/useVotes';
+import { useSettings } from './hooks/useSettings';
 import { useAchievements, type Achievement } from './hooks/useAchievements';
 import { useAchievementEffects } from './hooks/useAchievementEffects';
 import { recordImpression, recordClick, recordWishlist, recordNotInterested, recordUpvote, recordDownvote } from './api/books';
 import { getAffiliateUrl } from './config';
 import type { Book } from './types/book';
+
+// Pool management constants
+const MIN_FRESH_BOOKS = 20;        // Keep refilling until this many unseen books
+const SPINS_BEFORE_REFILL = 4;     // Also refill after N spins regardless
+
+// Calculate fresh book count from current state
+function calculateFreshBookCount(
+  books: Book[],
+  seenBookIds: Set<string>,
+  notInterestedIds: string[]
+): number {
+  return books.filter((b) => !seenBookIds.has(b.id) && !notInterestedIds.includes(b.id)).length;
+}
 
 type OnboardingPhase = 'initial' | 'snarky';
 
@@ -30,12 +45,16 @@ export default function App() {
   const achievementEffects = useAchievementEffects(unlockedAchievements);
 
   // Data hooks
-  const { books, loading, error, filters, setFilters } = useBooks();
+  const { books, loading, error, filters, setFilters, refillPool, incrementSpinCount, isRefilling } = useBooks();
   const { wishlist, addToWishlist, removeFromWishlist, count: wishlistCount } = useWishlist();
   const { notInterestedIds, addNotInterested, count: notInterestedCount } = useNotInterested();
   const { history, addToHistory, clearHistory } = useHistory();
   const { completed, addCompleted, clearCompleted, isCompleted, count: completedCount } = useCompleted();
   const { votes, getVote, setVote } = useVotes();
+  const { settings, updateSettings } = useSettings();
+
+  // Track spins since last refill to prevent constant refilling
+  const spinsSinceLastRefill = useRef(0);
 
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [triggerSpin, setTriggerSpin] = useState(false);
@@ -51,12 +70,76 @@ export default function App() {
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showRemortDialog, setShowRemortDialog] = useState(false);
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
 
-  // Filter out not-interested books
-  const filteredBooks = useMemo(
-    () => books.filter((book) => !notInterestedIds.includes(book.id)),
-    [books, notInterestedIds]
-  );
+  // Get seen book IDs from history
+  const seenBookIds = useMemo(() => new Set(history.map((h) => h.bookId)), [history]);
+
+  // Filter out not-interested books (always) and optionally seen/completed based on settings
+  // Wishlisted books are never filtered out by the "seen" filter
+  const filteredBooks = useMemo(() => {
+    let result = books.filter((book) => !notInterestedIds.includes(book.id));
+
+    if (settings.hideCompletedBooks) {
+      result = result.filter((book) => !completed.some((entry) => entry.bookId === book.id));
+    }
+
+    if (settings.hideSeenBooks) {
+      // Don't filter out wishlisted books even if seen
+      result = result.filter((book) => !seenBookIds.has(book.id) || wishlist.includes(book.id));
+    }
+
+    return result;
+  }, [books, notInterestedIds, completed, seenBookIds, wishlist, settings]);
+
+  // Refs to access latest state in callbacks without re-triggering effects
+  const booksRef = useRef(books);
+  const historyRef = useRef(history);
+  const notInterestedIdsRef = useRef(notInterestedIds);
+
+  // Keep refs in sync
+  useEffect(() => { booksRef.current = books; }, [books]);
+  useEffect(() => { historyRef.current = history; }, [history]);
+  useEffect(() => { notInterestedIdsRef.current = notInterestedIds; }, [notInterestedIds]);
+
+  // Konami code detection: ↑ ↑ ↓ ↓ ← → ← → B A
+  const konamiSequence = useRef<string[]>([]);
+  const KONAMI_CODE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'];
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Add the key to the sequence
+      konamiSequence.current.push(e.code);
+
+      // Keep only the last N keys (length of Konami code)
+      if (konamiSequence.current.length > KONAMI_CODE.length) {
+        konamiSequence.current.shift();
+      }
+
+      // Check if the sequence matches
+      if (konamiSequence.current.length === KONAMI_CODE.length &&
+          konamiSequence.current.every((key, i) => key === KONAMI_CODE[i])) {
+        // Reset the sequence
+        konamiSequence.current = [];
+
+        // Unlock the achievement
+        const achievement = unlock('konami');
+        if (achievement) {
+          setCurrentAchievement(achievement);
+          confetti({
+            particleCount: 200,
+            spread: 90,
+            origin: { y: 0.5 },
+            colors: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'],
+            zIndex: 1000,
+          });
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [unlock]);
 
   // Show achievement notification
   const showAchievementNotification = useCallback((achievement: Achievement | null) => {
@@ -76,8 +159,8 @@ export default function App() {
   const handleBookSelected = useCallback(async (book: Book) => {
     setSelectedBook(book);
 
-    // Add to history
-    addToHistory(book.id);
+    // Track spin count for pool refill
+    incrementSpinCount();
 
     // Track spin for speedReader achievement
     const speedReaderAchievement = trackSpin();
@@ -85,13 +168,34 @@ export default function App() {
       showAchievementNotification(speedReaderAchievement);
     }
 
-    // Record impression
-    try {
-      await recordImpression(book.id);
-    } catch (err) {
+    // Record impression (fire and forget, don't await)
+    recordImpression(book.id).catch((err) => {
       console.error('Failed to record impression:', err);
+    });
+
+    // Track spins for refill logic
+    spinsSinceLastRefill.current += 1;
+
+    // Check if pool needs refilling
+    // Only refill after SPINS_BEFORE_REFILL spins, OR if fresh count is critically low AND we've done at least 2 spins
+    if (!isRefilling) {
+      const currentSeenIds = new Set(historyRef.current.map((h) => h.bookId));
+      const freshCount = calculateFreshBookCount(
+        booksRef.current,
+        currentSeenIds,
+        notInterestedIdsRef.current
+      );
+
+      const shouldRefillBySpins = spinsSinceLastRefill.current >= SPINS_BEFORE_REFILL;
+      // Only check fresh count after at least 2 spins to avoid immediate re-refill
+      const shouldRefillByCount = spinsSinceLastRefill.current >= 2 && freshCount < MIN_FRESH_BOOKS;
+
+      if (shouldRefillBySpins || shouldRefillByCount) {
+        spinsSinceLastRefill.current = 0; // Reset counter
+        refillPool();
+      }
     }
-  }, [addToHistory, trackSpin, showAchievementNotification]);
+  }, [incrementSpinCount, trackSpin, showAchievementNotification, isRefilling, refillPool]);
 
   const handleSpinStart = useCallback(() => {
     setSelectedBook(null);
@@ -100,6 +204,9 @@ export default function App() {
 
   const handleWishlist = useCallback(async () => {
     if (!selectedBook) return;
+
+    // Mark as seen before moving on
+    addToHistory(selectedBook.id);
 
     addToWishlist(selectedBook.id);
 
@@ -121,10 +228,13 @@ export default function App() {
 
     // Spin again after wishlisting
     setTriggerSpin(true);
-  }, [selectedBook, addToWishlist, wishlistCount, unlock, showAchievementNotification]);
+  }, [selectedBook, addToHistory, addToWishlist, wishlistCount, unlock, showAchievementNotification]);
 
   const handleCompleted = useCallback(() => {
     if (!selectedBook) return;
+
+    // Mark as seen before moving on
+    addToHistory(selectedBook.id);
 
     addCompleted(selectedBook.id);
 
@@ -144,14 +254,21 @@ export default function App() {
 
     // Spin again after marking complete
     setTriggerSpin(true);
-  }, [selectedBook, addCompleted, completedCount, unlock, showAchievementNotification]);
+  }, [selectedBook, addToHistory, addCompleted, completedCount, unlock, showAchievementNotification]);
 
   const handleSpinAgain = useCallback(() => {
+    // Mark current book as seen before spinning again
+    if (selectedBook) {
+      addToHistory(selectedBook.id);
+    }
     setTriggerSpin(true);
-  }, []);
+  }, [selectedBook, addToHistory]);
 
   const handleIgnore = useCallback(async () => {
     if (selectedBook) {
+      // Mark as seen before moving on
+      addToHistory(selectedBook.id);
+
       addNotInterested(selectedBook.id);
 
       try {
@@ -167,7 +284,7 @@ export default function App() {
       }
     }
     setTriggerSpin(true);
-  }, [selectedBook, addNotInterested, notInterestedCount, unlock, showAchievementNotification]);
+  }, [selectedBook, addToHistory, addNotInterested, notInterestedCount, unlock, showAchievementNotification]);
 
   const handleCoverClick = useCallback(async () => {
     if (!selectedBook) return;
@@ -310,6 +427,15 @@ export default function App() {
           />
           <button
             className="stats-button"
+            onClick={() => setShowSettingsPanel(true)}
+            disabled={showOnboarding}
+            type="button"
+            title="Settings"
+          >
+            <span role="img" aria-label="settings">&#9881;</span>
+          </button>
+          <button
+            className="stats-button"
             onClick={() => setShowPrivacyPolicy(true)}
             disabled={showOnboarding}
             type="button"
@@ -407,6 +533,13 @@ export default function App() {
         <PrivacyPolicy
           isOpen={showPrivacyPolicy}
           onClose={() => setShowPrivacyPolicy(false)}
+        />
+
+        <SettingsPanel
+          isOpen={showSettingsPanel}
+          onClose={() => setShowSettingsPanel(false)}
+          settings={settings}
+          onSettingsChange={updateSettings}
         />
       </div>
     </ThemeProvider>

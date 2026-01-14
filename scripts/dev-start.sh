@@ -33,12 +33,20 @@ AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test aws dynamodb create-table \
   --billing-mode PAY_PER_REQUEST \
   --region us-east-1 2>/dev/null || echo "Table already exists, skipping..."
 
-# 3. Import sample data
+# 3. Import data (prefer prod data if available, fall back to sample)
 echo ""
-echo "[3/5] Importing sample books..."
+echo "[3/5] Importing books..."
+# Check for prod data first, fall back to sample
+if [ -f "$PROJECT_ROOT/data/books-prod.json" ]; then
+  echo "Using production data (data/books-prod.json)..."
+  DATA_FILE="$PROJECT_ROOT/data/books-prod.json"
+else
+  echo "Using sample data (data/sample-books.json)..."
+  DATA_FILE="$PROJECT_ROOT/data/sample-books.json"
+fi
 # Convert path for Windows compatibility
-SAMPLE_FILE=$(cygpath -w "$PROJECT_ROOT/data/sample-books.json" 2>/dev/null || echo "$PROJECT_ROOT/data/sample-books.json")
-./gradlew :curator:run --args="import $SAMPLE_FILE --dynamo http://localhost:4566" --quiet
+DATA_FILE_PATH=$(cygpath -w "$DATA_FILE" 2>/dev/null || echo "$DATA_FILE")
+./gradlew :curator:run --args="import $DATA_FILE_PATH --dynamo http://localhost:4566" --quiet
 
 # 4. Start Quarkus in background
 echo ""

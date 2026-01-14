@@ -15,7 +15,6 @@ body {
   font-family: 'Press Start 2P', cursive;
   background: linear-gradient(180deg, var(--ff-blue-dark) 0%, #000000 100%);
   color: var(--ff-text-primary);
-  min-height: 100vh;
   line-height: 1.8;
   font-size: 10px;
 }
@@ -61,35 +60,41 @@ img {
 
 /* App layout */
 .app {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  padding: var(--spacing-lg);
+  padding: clamp(0.25rem, 2%, 1.5rem);
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-sm) 0;
+  padding: clamp(0.25rem, 1%, 0.5rem) 0;
+  gap: clamp(0.25rem, 1%, 0.5rem);
   flex-shrink: 0;
   position: relative;
   z-index: 200;
 }
 
 .stats-button {
-  width: 48px;
-  height: 48px;
+  width: clamp(36px, 8%, 48px);
+  height: clamp(36px, 8%, 48px);
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(180deg, var(--ff-blue-light) 0%, var(--ff-blue-mid) 100%);
-  border: 3px solid var(--ff-border-outer);
-  box-shadow: inset 0 0 0 2px var(--ff-border-inner);
-  border-radius: 8px;
+  border: clamp(2px, 0.5%, 3px) solid var(--ff-border-outer);
+  box-shadow: inset 0 0 0 clamp(1px, 0.3%, 2px) var(--ff-border-inner);
+  border-radius: clamp(6px, 1%, 8px);
   cursor: pointer;
   transition: all 0.15s ease;
-  font-size: 20px;
+  font-size: clamp(16px, 4%, 20px);
+  flex-shrink: 0;
+  color: var(--ff-text-primary);
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .stats-button:hover:not(:disabled) {
@@ -117,9 +122,9 @@ img {
 
 .main {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
 }
 
 /* Loading and error states */
@@ -152,25 +157,4 @@ img {
 .error-detail {
   font-size: 8px;
   color: var(--ff-text-muted);
-}
-
-/* Mobile styles */
-@media (max-width: 600px) {
-  .app {
-    padding: var(--spacing-sm);
-  }
-
-  .header {
-    gap: var(--spacing-xs);
-  }
-
-  .stats-button {
-    width: 36px;
-    height: 36px;
-    font-size: 16px;
-    border-width: 2px;
-    box-shadow: inset 0 0 0 1px var(--ff-border-inner);
-    border-radius: 6px;
-    flex-shrink: 0;
-  }
 }

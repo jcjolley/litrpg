@@ -1,7 +1,7 @@
 # Makefile for LitRPG project
 SHELL := /bin/bash
 
-.PHONY: build-lambda build-ui deploy-ui deploy test clean aws-login stats stats-local add
+.PHONY: build-lambda build-ui deploy-ui deploy test clean aws-login stats stats-local add export-prod import-local setup-local-prod
 
 # Check AWS credentials and login if needed
 aws-login:
@@ -74,3 +74,24 @@ add: aws-login
 	eval "$$(aws configure export-credentials --format env)" && \
 		AWS_REGION=us-west-2 \
 		./gradlew :curator:run --args="add -y $(URL)"
+
+# Export books from production DynamoDB to local file
+export-prod: aws-login
+	@echo "Exporting books from production DynamoDB..."
+	eval "$$(aws configure export-credentials --format env)" && \
+		AWS_REGION=us-west-2 \
+		./gradlew :curator:run --args="export -o ../data/books-prod.json"
+	@echo "Exported to data/books-prod.json"
+
+# Import books from file to local DynamoDB (LocalStack)
+import-local:
+	@if [ ! -f "data/books-prod.json" ]; then \
+		echo "Error: data/books-prod.json not found. Run 'make export-prod' first."; \
+		exit 1; \
+	fi
+	@echo "Importing books to LocalStack DynamoDB..."
+	./gradlew :curator:run --args="import ../data/books-prod.json --dynamo http://localhost:4566"
+
+# Full local setup with prod data: export from prod, import to local
+setup-local-prod: export-prod import-local
+	@echo "Local environment ready with production data!"
