@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import styles from './OnboardingDialog.module.css';
 
 type OnboardingPhase = 'initial' | 'snarky';
@@ -21,6 +21,18 @@ export function OnboardingDialog({
   countdownSeconds = 4,
 }: OnboardingDialogProps) {
   const [countdown, setCountdown] = useState(countdownSeconds);
+  const yesButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Auto-focus the YES button when dialog opens in initial phase
+  useEffect(() => {
+    if (isOpen && phase === 'initial') {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        yesButtonRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, phase]);
 
   // Reset and start countdown when entering snarky phase
   useEffect(() => {
@@ -76,7 +88,7 @@ export function OnboardingDialog({
                 Are you ready to enter your next world?
               </p>
               <div className={styles.actions}>
-                <button className={styles.button} onClick={onYes}>
+                <button ref={yesButtonRef} className={styles.button} onClick={onYes}>
                   <span className={styles.buttonIcon}>▶</span>
                   YES
                 </button>
