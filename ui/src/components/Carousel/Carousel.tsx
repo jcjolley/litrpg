@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import type { Book } from '../../types/book';
 import { CarouselTrack } from './CarouselTrack';
 import { useCarouselSpin } from '../../hooks/useCarouselSpin';
@@ -82,6 +82,12 @@ export function Carousel({
     stopAndLand(targetIndex);
   }, [books, userWishlist, selectBook, getTargetIndex, stopAndLand, onSpinStart]);
 
+  // Keep a ref to doLand to avoid stale closures in effects
+  const doLandRef = useRef(doLand);
+  useEffect(() => {
+    doLandRef.current = doLand;
+  }, [doLand]);
+
   // Handle clicking on a non-selected card to focus it
   const handleCardClick = useCallback((index: number) => {
     if (spinState === 'spinning' || spinState === 'continuous') return;
@@ -99,9 +105,9 @@ export function Carousel({
   // Handle transition from continuous spin to landing
   useEffect(() => {
     if (!continuousSpin && spinState === 'continuous') {
-      doLand();
+      doLandRef.current();
     }
-  }, [continuousSpin, spinState, doLand]);
+  }, [continuousSpin, spinState]);
 
   // Auto-spin on mount (only if not in continuous mode)
   useEffect(() => {

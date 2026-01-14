@@ -50,8 +50,20 @@ export function OnboardingDialog({
 
   if (!isOpen) return null;
 
+  // Handle clicks on the dialog area - anything except the No button triggers Yes
+  const handleDialogClick = (e: React.MouseEvent) => {
+    // Only handle clicks in initial phase
+    if (phase !== 'initial') return;
+
+    // Check if the click was on the No button (let it handle itself)
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-action="no"]')) return;
+
+    onYes();
+  };
+
   return (
-    <div className={styles.overlay}>
+    <div className={styles.overlay} onClick={handleDialogClick}>
       <div className={styles.dialog}>
         <div className={styles.header}>
           <span className={styles.headerText}>SYSTEM MESSAGE</span>
@@ -68,7 +80,7 @@ export function OnboardingDialog({
                   <span className={styles.buttonIcon}>▶</span>
                   YES
                 </button>
-                <button className={styles.button} onClick={onNo}>
+                <button className={styles.button} onClick={onNo} data-action="no">
                   <span className={styles.buttonIcon}>▶</span>
                   NO
                 </button>

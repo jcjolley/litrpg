@@ -64,6 +64,7 @@ export default function App() {
         spread: 70,
         origin: { y: 0.6 },
         colors: ['#f8e800', '#40c040', '#4080c0', '#c04040', '#ffffff'],
+        zIndex: 1000,
       });
     }
   }, []);
