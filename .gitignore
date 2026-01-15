@@ -48,7 +48,8 @@ tfplan
 contact.json
 
 # Claude Code
-.claude/
+.claude/*
+!.claude/rules/
 
 # Local data
 data/

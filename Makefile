@@ -1,7 +1,7 @@
 # Makefile for LitRPG project
 SHELL := /bin/bash
 
-.PHONY: build-lambda build-ui deploy-ui deploy test clean aws-login stats stats-local add export-prod import-local setup-local-prod
+.PHONY: build-lambda build-ui deploy-ui deploy test clean aws-login stats stats-local list list-local add remove refresh export-prod import-local setup-local-prod help
 
 # Check AWS credentials and login if needed
 aws-login:
@@ -63,6 +63,16 @@ stats: aws-login
 stats-local:
 	./gradlew :curator:run --args="stats --dynamo http://localhost:4566"
 
+# List all books in production
+list: aws-login
+	eval "$$(aws configure export-credentials --format env)" && \
+		AWS_REGION=us-west-2 \
+		./gradlew :curator:run --args="list"
+
+# List all books in local DynamoDB
+list-local:
+	./gradlew :curator:run --args="list --dynamo http://localhost:4566"
+
 # Quick add/update a book from Audible or Royal Road URL
 # Usage: make add URL=https://www.audible.com/pd/Book-Title/B0XXXXXXXX
 #        make add URL=https://www.royalroad.com/fiction/12345/title
@@ -95,3 +105,55 @@ import-local:
 # Full local setup with prod data: export from prod, import to local
 setup-local-prod: export-prod import-local
 	@echo "Local environment ready with production data!"
+
+# Remove a book by ID
+# Usage: make remove ID=abc123
+remove: aws-login
+	@if [ -z "$(ID)" ]; then \
+		echo "Usage: make remove ID=<book-id>"; \
+		exit 1; \
+	fi
+	eval "$$(aws configure export-credentials --format env)" && \
+		AWS_REGION=us-west-2 \
+		./gradlew :curator:run --args="remove $(ID)"
+
+# Refresh a book (re-scrape and update)
+# Usage: make refresh ID=abc123
+refresh: aws-login
+	@if [ -z "$(ID)" ]; then \
+		echo "Usage: make refresh ID=<book-id>"; \
+		exit 1; \
+	fi
+	eval "$$(aws configure export-credentials --format env)" && \
+		AWS_REGION=us-west-2 \
+		./gradlew :curator:run --args="refresh $(ID)"
+
+# Show all available commands
+help:
+	@echo "LitRPG Makefile Commands:"
+	@echo ""
+	@echo "Development:"
+	@echo "  make dev              Start local dev environment"
+	@echo "  make test             Run all tests"
+	@echo "  make clean            Clean build artifacts"
+	@echo ""
+	@echo "Build & Deploy:"
+	@echo "  make build-lambda     Build native Lambda"
+	@echo "  make build-ui         Build UI for production"
+	@echo "  make deploy           Full deployment"
+	@echo "  make deploy-infra     Deploy Terraform only"
+	@echo "  make deploy-ui        Deploy UI only"
+	@echo ""
+	@echo "Curator (Production):"
+	@echo "  make list             List all books"
+	@echo "  make stats            View analytics"
+	@echo "  make add URL=<url>    Add book from Audible/RoyalRoad"
+	@echo "  make remove ID=<id>   Remove a book"
+	@echo "  make refresh ID=<id>  Re-scrape a book"
+	@echo "  make export-prod      Export to data/books-prod.json"
+	@echo ""
+	@echo "Curator (Local):"
+	@echo "  make list-local       List books in LocalStack"
+	@echo "  make stats-local      View local analytics"
+	@echo "  make import-local     Import from data/books-prod.json"
+	@echo "  make setup-local-prod Export prod + import to local"
