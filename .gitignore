@@ -50,6 +50,7 @@ contact.json
 # Claude Code
 .claude/*
 !.claude/rules/
+!.claude/commands/
 
 # Local data
 data/
