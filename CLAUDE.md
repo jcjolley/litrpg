@@ -60,7 +60,7 @@ curator/src/main/kotlin/.../curator/
 
 ## Workflow
 
-- **PRD-first for multistep tasks** - When a task involves 3+ files or multiple steps: (1) check `docs/prd/` for existing PRD, (2) if none exists, draft one and await approval, (3) only then implement.
+- **PRD-first for multistep tasks** - When a task involves 3+ files or multiple steps: (1) check `docs/prd/` for existing PRD, (2) if none exists, draft one using `@docs/prd/TEMPLATE.md` and await approval, (3) only then implement.
 
 ## Development
 
