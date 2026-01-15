@@ -58,6 +58,10 @@ curator/src/main/kotlin/.../curator/
 - **YAGNI** - don't build until needed
 - **Comments explain "why"** - code shows what
 
+## Workflow
+
+- **PRD-first for multistep tasks** - When a task involves 3+ files or multiple steps: (1) check `docs/prd/` for existing PRD, (2) if none exists, draft one and await approval, (3) only then implement.
+
 ## Development
 
 **Prerequisites**: JDK 21, Docker, Ollama
