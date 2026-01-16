@@ -1,7 +1,7 @@
 # Makefile for LitRPG project
 SHELL := /bin/bash
 
-.PHONY: build build-lambda build-ui deploy-ui deploy test test-class clean aws-login stats stats-local list list-local add remove refresh export-prod import-local setup-local-prod localstack localstack-init localstack-down curator curator-local help
+.PHONY: build build-lambda build-ui deploy-ui deploy test test-class clean aws-login stats stats-local list list-local add remove refresh export-prod import-local setup-local-prod localstack localstack-init localstack-down curator curator-local announce announce-local help
 
 # Check AWS credentials and login if needed
 aws-login:
@@ -158,6 +158,26 @@ refresh: aws-login
 		AWS_REGION=us-west-2 \
 		./gradlew :curator:run --args="refresh $(ID)"
 
+# Create an announcement (production)
+# Usage: make announce TITLE="New Feature" BODY="We added dark mode!"
+announce: aws-login
+	@if [ -z "$(TITLE)" ] || [ -z "$(BODY)" ]; then \
+		echo "Usage: make announce TITLE=\"title\" BODY=\"body\""; \
+		exit 1; \
+	fi
+	eval "$$(aws configure export-credentials --format env)" && \
+		AWS_REGION=us-west-2 \
+		./gradlew :curator:run --args="announce '$(TITLE)' '$(BODY)'"
+
+# Create an announcement (local)
+# Usage: make announce-local TITLE="Test" BODY="Testing locally"
+announce-local:
+	@if [ -z "$(TITLE)" ] || [ -z "$(BODY)" ]; then \
+		echo "Usage: make announce-local TITLE=\"title\" BODY=\"body\""; \
+		exit 1; \
+	fi
+	./gradlew :curator:run --args="announce '$(TITLE)' '$(BODY)' --dynamo http://localhost:4566"
+
 # Show all available commands
 help:
 	@echo "LitRPG Makefile Commands:"
@@ -184,9 +204,11 @@ help:
 	@echo "  make remove ID=<id>   Remove a book"
 	@echo "  make refresh ID=<id>  Re-scrape a book"
 	@echo "  make export-prod      Export to data/books-prod.json"
+	@echo "  make announce TITLE=\"...\" BODY=\"...\"  Create announcement"
 	@echo ""
 	@echo "Curator (Local):"
 	@echo "  make list-local       List books in LocalStack"
 	@echo "  make stats-local      View local analytics"
 	@echo "  make import-local     Import from data/books-prod.json"
 	@echo "  make setup-local-prod Export prod + import to local"
+	@echo "  make announce-local TITLE=\"...\" BODY=\"...\"  Create local announcement"

@@ -144,3 +144,25 @@ resource "aws_dynamodb_table" "books" {
     Name = var.table_name
   }
 }
+
+# Announcements table - simple structure for app updates/news
+resource "aws_dynamodb_table" "announcements" {
+  name         = "${var.table_name}-announcements"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  # No GSIs needed - small dataset, scan is fine
+
+  point_in_time_recovery {
+    enabled = var.enable_pitr
+  }
+
+  tags = {
+    Name = "${var.table_name}-announcements"
+  }
+}

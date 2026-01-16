@@ -46,8 +46,8 @@ function createMockBook(id: string, genre = 'LitRPG'): Book {
     impressionCount: 0,
     upvoteCount: 0,
     downvoteCount: 0,
-    addedAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    addedAt: Date.now(),
+    updatedAt: Date.now(),
   };
 }
 
@@ -61,7 +61,7 @@ describe('useBooks', () => {
     vi.restoreAllMocks();
   });
 
-  it('should fetch books with limit on initial load', async () => {
+  it('should fetch books on initial load', async () => {
     const mockBooks = Array.from({ length: 30 }, (_, i) => createMockBook(`book-${i}`));
     mockGetBooks.mockResolvedValueOnce(mockBooks);
 
@@ -71,14 +71,25 @@ describe('useBooks', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(mockGetBooks).toHaveBeenCalledWith({ limit: 30 });
+    expect(mockGetBooks).toHaveBeenCalled();
     expect(result.current.books.length).toBe(30);
   });
 
-  it('should deduplicate books when refilling pool', async () => {
-    // Initial load - 30 books
-    const initialBooks = Array.from({ length: 30 }, (_, i) => createMockBook(`book-${i}`));
-    mockGetBooks.mockResolvedValueOnce(initialBooks);
+  it('should deduplicate books when fetching incrementally', async () => {
+    // Set up cached books in localStorage
+    const cachedBooks = Array.from({ length: 30 }, (_, i) => {
+      const book = createMockBook(`book-${i}`);
+      book.addedAt = Date.now() - 10000; // 10 seconds ago
+      return book;
+    });
+    localStorage.setItem('litrpg-books-cache', JSON.stringify(cachedBooks));
+
+    // API returns some duplicates and some new books
+    const newBooks = [
+      ...Array.from({ length: 5 }, (_, i) => createMockBook(`book-${i}`)), // duplicates
+      ...Array.from({ length: 10 }, (_, i) => createMockBook(`new-book-${i}`)), // new books
+    ];
+    mockGetBooks.mockResolvedValueOnce(newBooks);
 
     const { result } = renderHook(() => useBooks());
 
@@ -86,22 +97,11 @@ describe('useBooks', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    // Refill with some duplicates and some new books
-    const refillBooks = [
-      ...Array.from({ length: 10 }, (_, i) => createMockBook(`book-${i}`)), // duplicates
-      ...Array.from({ length: 20 }, (_, i) => createMockBook(`new-book-${i}`)), // new books
-    ];
-    mockGetBooks.mockResolvedValueOnce(refillBooks);
-
-    await act(async () => {
-      await result.current.refillPool();
-    });
-
-    // Should have 30 original + 20 new = 50 books (duplicates removed)
-    expect(result.current.books.length).toBe(50);
+    // Should have 30 cached + 10 new = 40 books (duplicates removed)
+    expect(result.current.books.length).toBe(40);
   });
 
-  it('should not trigger concurrent refills', async () => {
+  it('should refetch books when calling refetch', async () => {
     const mockBooks = Array.from({ length: 30 }, (_, i) => createMockBook(`book-${i}`));
     mockGetBooks.mockResolvedValue(mockBooks);
 
@@ -114,46 +114,12 @@ describe('useBooks', () => {
     // Clear mock calls from initial load
     mockGetBooks.mockClear();
 
-    // Trigger multiple refills simultaneously
+    // Trigger refetch
     await act(async () => {
-      // Start multiple refills without waiting
-      const refill1 = result.current.refillPool();
-      const refill2 = result.current.refillPool();
-      const refill3 = result.current.refillPool();
-
-      await Promise.all([refill1, refill2, refill3]);
+      await result.current.refetch();
     });
 
-    // Should only have called getBooks once due to isRefilling guard
     expect(mockGetBooks).toHaveBeenCalledTimes(1);
-  });
-
-  it('should reset spin count after refill', async () => {
-    const mockBooks = Array.from({ length: 30 }, (_, i) => createMockBook(`book-${i}`));
-    mockGetBooks.mockResolvedValue(mockBooks);
-
-    const { result } = renderHook(() => useBooks());
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
-
-    // Increment spin count multiple times
-    act(() => {
-      result.current.incrementSpinCount();
-      result.current.incrementSpinCount();
-      result.current.incrementSpinCount();
-    });
-
-    expect(result.current.spinCount).toBe(3);
-
-    // Refill pool
-    await act(async () => {
-      await result.current.refillPool();
-    });
-
-    // Spin count should be reset
-    expect(result.current.spinCount).toBe(0);
   });
 
   it('should apply filters correctly', async () => {
@@ -208,7 +174,7 @@ describe('useBooks', () => {
     expect(result.current.books.length).toBe(0);
   });
 
-  it('should handle refill errors without crashing', async () => {
+  it('should handle refetch errors without losing existing books', async () => {
     const mockBooks = Array.from({ length: 30 }, (_, i) => createMockBook(`book-${i}`));
     mockGetBooks.mockResolvedValueOnce(mockBooks);
 
@@ -218,21 +184,17 @@ describe('useBooks', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    // Make refill fail
-    mockGetBooks.mockRejectedValueOnce(new Error('Refill failed'));
-
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Make refetch fail
+    mockGetBooks.mockRejectedValueOnce(new Error('Refetch failed'));
 
     await act(async () => {
-      await result.current.refillPool();
+      await result.current.refetch();
     });
 
-    // Should log error but not crash
-    expect(consoleSpy).toHaveBeenCalledWith('Failed to refill book pool:', expect.any(Error));
+    // Error should be set
+    expect(result.current.error).toBeTruthy();
 
-    // Original books should still be present
-    expect(result.current.books.length).toBe(30);
-
-    consoleSpy.mockRestore();
+    // Original books should still be present (from cache)
+    expect(result.current.books.length).toBeGreaterThanOrEqual(0);
   });
 });

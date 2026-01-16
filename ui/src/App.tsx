@@ -10,6 +10,8 @@ import { RemortDialog } from './components/RemortDialog';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { HistoryPanel } from './components/HistoryPanel';
 import { SettingsPanel } from './components/SettingsPanel';
+import { AnnouncementsButton } from './components/AnnouncementsButton';
+import { AnnouncementsPanel } from './components/AnnouncementsPanel';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useBooks } from './hooks/useBooks';
 import { useWishlist } from './hooks/useWishlist';
@@ -20,6 +22,7 @@ import { useVotes, type VoteType } from './hooks/useVotes';
 import { useSettings } from './hooks/useSettings';
 import { useAchievements, type Achievement } from './hooks/useAchievements';
 import { useAchievementEffects } from './hooks/useAchievementEffects';
+import { useAnnouncements } from './hooks/useAnnouncements';
 import { recordImpression, recordClick, recordWishlist, recordNotInterested, recordUpvote, recordDownvote } from './api/books';
 import { getAffiliateUrl } from './config';
 import type { Book } from './types/book';
@@ -39,6 +42,15 @@ export default function App() {
   const { completed, addCompleted, clearCompleted, isCompleted, count: completedCount } = useCompleted();
   const { votes, getVote, setVote } = useVotes();
   const { settings, updateSettings } = useSettings();
+  const {
+    announcements,
+    isLoading: announcementsLoading,
+    unreadCount,
+    readCount: announcementsReadCount,
+    markAllRead,
+    getVote: getAnnouncementVote,
+    vote: voteAnnouncement,
+  } = useAnnouncements();
 
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [triggerSpin, setTriggerSpin] = useState(false);
@@ -55,6 +67,7 @@ export default function App() {
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showRemortDialog, setShowRemortDialog] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
+  const [showAnnouncementsPanel, setShowAnnouncementsPanel] = useState(false);
 
   // Get seen book IDs from history
   const seenBookIds = useMemo(() => new Set(history.map((h) => h.bookId)), [history]);
@@ -297,6 +310,21 @@ export default function App() {
     setCurrentAchievement(null);
   }, []);
 
+  // Handle closing announcements panel - marks all as read and checks achievement
+  const handleCloseAnnouncements = useCallback(() => {
+    // Check if we'll hit 5 reads after marking all as read
+    const willHaveRead = announcementsReadCount + unreadCount;
+    const alreadyHasAchievement = unlockedAchievements.includes('townCrier');
+
+    markAllRead();
+    setShowAnnouncementsPanel(false);
+
+    // Check for townCrier achievement (5 announcements read)
+    if (!alreadyHasAchievement && willHaveRead >= 5) {
+      showAchievementNotification(unlock('townCrier'));
+    }
+  }, [announcementsReadCount, unreadCount, unlockedAchievements, markAllRead, unlock, showAchievementNotification]);
+
   // Handle filter changes and track genre exploration
   const handleFiltersChange = useCallback(
     (newFilters: typeof filters) => {
@@ -372,6 +400,10 @@ export default function App() {
             filters={filters}
             onFiltersChange={handleFiltersChange}
             disabled={showOnboarding}
+          />
+          <AnnouncementsButton
+            unreadCount={unreadCount}
+            onClick={() => setShowAnnouncementsPanel(true)}
           />
           <button
             className="stats-button"
@@ -467,10 +499,20 @@ export default function App() {
           stats={stats}
           wishlistCount={wishlistCount}
           notInterestedCount={notInterestedCount}
+          announcementsReadCount={announcementsReadCount}
           onRemort={() => {
             setShowStatsPanel(false);
             setShowRemortDialog(true);
           }}
+        />
+
+        <AnnouncementsPanel
+          isOpen={showAnnouncementsPanel}
+          onClose={handleCloseAnnouncements}
+          announcements={announcements}
+          isLoading={announcementsLoading}
+          getVote={getAnnouncementVote}
+          onVote={voteAnnouncement}
         />
 
         <RemortDialog

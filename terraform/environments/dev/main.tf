@@ -125,6 +125,8 @@ module "lambda" {
   function_name             = var.lambda_function_name
   dynamodb_table_arn        = module.dynamodb.table_arn
   dynamodb_table_name       = module.dynamodb.table_name
+  announcements_table_arn   = module.dynamodb.announcements_table_arn
+  announcements_table_name  = module.dynamodb.announcements_table_name
   api_gateway_execution_arn = module.api_gateway.execution_arn
   memory_size               = var.lambda_memory_size
   timeout                   = var.lambda_timeout

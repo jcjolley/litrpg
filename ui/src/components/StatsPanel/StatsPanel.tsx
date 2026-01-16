@@ -13,6 +13,7 @@ interface StatsPanelProps {
   };
   wishlistCount: number;
   notInterestedCount: number;
+  announcementsReadCount: number;
   onRemort: () => void;
 }
 
@@ -32,6 +33,7 @@ const ACHIEVEMENT_PROGRESS = {
   picky: { current: (p: StatsPanelProps) => p.notInterestedCount, target: 10, label: 'dismissed' },
   explorer: { current: (p: StatsPanelProps) => p.stats.genresExplored.length, target: 3, label: 'genres' },
   speedReader: { current: (p: StatsPanelProps) => p.stats.totalSpins, target: 50, label: 'spins' },
+  townCrier: { current: (p: StatsPanelProps) => p.announcementsReadCount, target: 5, label: 'announcements' },
 };
 
 export function StatsPanel({
@@ -41,6 +43,7 @@ export function StatsPanel({
   stats,
   wishlistCount,
   notInterestedCount,
+  announcementsReadCount,
   onRemort,
 }: StatsPanelProps) {
   const { theme, setTheme, isThemeUnlocked } = useTheme();
@@ -79,7 +82,7 @@ export function StatsPanel({
   const getProgress = (id: string) => {
     const progress = ACHIEVEMENT_PROGRESS[id as keyof typeof ACHIEVEMENT_PROGRESS];
     if (!progress) return null;
-    const props = { stats, wishlistCount, notInterestedCount } as StatsPanelProps;
+    const props = { stats, wishlistCount, notInterestedCount, announcementsReadCount } as StatsPanelProps;
     return {
       current: progress.current(props),
       target: progress.target,

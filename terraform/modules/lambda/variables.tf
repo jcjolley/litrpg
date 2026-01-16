@@ -18,6 +18,16 @@ variable "dynamodb_table_name" {
   type        = string
 }
 
+variable "announcements_table_arn" {
+  description = "ARN of announcements DynamoDB table"
+  type        = string
+}
+
+variable "announcements_table_name" {
+  description = "Name of announcements DynamoDB table"
+  type        = string
+}
+
 variable "deployment_type" {
   description = "Deployment type: 'zip' or 'container'"
   type        = string

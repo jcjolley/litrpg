@@ -39,7 +39,8 @@ resource "aws_iam_role_policy" "dynamodb_access" {
       ]
       Resource = [
         var.dynamodb_table_arn,
-        "${var.dynamodb_table_arn}/index/*"
+        "${var.dynamodb_table_arn}/index/*",
+        var.announcements_table_arn
       ]
     }]
   })
@@ -68,9 +69,10 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      DYNAMODB_TABLE_NAME     = var.dynamodb_table_name
-      QUARKUS_PROFILE         = "prod"  # Always use prod profile in Lambda (IAM credentials, real DynamoDB)
-      DISABLE_SIGNAL_HANDLERS = "true"
+      DYNAMODB_TABLE_NAME              = var.dynamodb_table_name
+      ANNOUNCEMENTS_TABLE_NAME         = var.announcements_table_name
+      QUARKUS_PROFILE                  = "prod"  # Always use prod profile in Lambda (IAM credentials, real DynamoDB)
+      DISABLE_SIGNAL_HANDLERS          = "true"
     }
   }
 

@@ -16,6 +16,7 @@ fun main(args: Array<String>) {
     Curator()
         .subcommands(
             AddCommand(),
+            AnnounceCommand(),
             ListCommand(),
             UpdateCommand(),
             RemoveCommand(),

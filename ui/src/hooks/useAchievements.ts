@@ -119,6 +119,14 @@ export const ACHIEVEMENTS: Record<string, Achievement> = {
     effect: 'Retro mode unlocked',
     effectType: 'feature',
   },
+  townCrier: {
+    id: 'townCrier',
+    title: 'ACHIEVEMENT UNLOCKED!',
+    subtitle: 'Town Crier',
+    description: 'Read 5 announcements - Hear ye, hear ye!',
+    effect: 'You feel more connected to the realm',
+    effectType: 'feature',
+  },
   completionist: {
     id: 'completionist',
     title: 'ACHIEVEMENT UNLOCKED!',
@@ -145,6 +153,7 @@ const COMPLETIONIST_REQUIREMENTS = [
   'completed20',
   'completed50',
   'konami',
+  'townCrier',
 ];
 
 interface StoredAchievements {
