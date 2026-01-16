@@ -105,86 +105,89 @@ export function StatsPanel({
           </button>
         </div>
 
-        {/* Stats Bars */}
-        <div className={styles.section}>
-          <StatBar name="CURIOSITY" value={statValues.curiosity} label={`x${wishlistCount} wishlisted`} />
-          <StatBar name="PICKINESS" value={statValues.pickiness} label={`x${notInterestedCount} dismissed`} />
-          <StatBar
-            name="EXPLORATION"
-            value={statValues.exploration}
-            label={`x${stats.genresExplored.length} genres`}
-          />
-          <StatBar name="DEDICATION" value={statValues.dedication} label={`x${stats.totalSpins} spins`} />
-        </div>
-
-        {/* Titles Section */}
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <span>TITLES EARNED</span>
-            <span className={styles.counter}>
-              [{unlockedAchievements.length}/{Object.keys(ACHIEVEMENTS).length}]
-            </span>
+        {/* Scrollable content */}
+        <div className={styles.content}>
+          {/* Stats Bars */}
+          <div className={styles.section}>
+            <StatBar name="CURIOSITY" value={statValues.curiosity} label={`x${wishlistCount} wishlisted`} />
+            <StatBar name="PICKINESS" value={statValues.pickiness} label={`x${notInterestedCount} dismissed`} />
+            <StatBar
+              name="EXPLORATION"
+              value={statValues.exploration}
+              label={`x${stats.genresExplored.length} genres`}
+            />
+            <StatBar name="DEDICATION" value={statValues.dedication} label={`x${stats.totalSpins} spins`} />
           </div>
 
-          <div className={styles.achievementList}>
-            {/* Show unlocked achievements */}
-            {achievementList
-              .filter((a) => a.isUnlocked)
-              .map((achievement) => (
+          {/* Titles Section */}
+          <div className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <span>TITLES EARNED</span>
+              <span className={styles.counter}>
+                [{unlockedAchievements.length}/{Object.keys(ACHIEVEMENTS).length}]
+              </span>
+            </div>
+
+            <div className={styles.achievementList}>
+              {/* Show unlocked achievements */}
+              {achievementList
+                .filter((a) => a.isUnlocked)
+                .map((achievement) => (
+                  <AchievementRow
+                    key={achievement.id}
+                    achievement={achievement}
+                    isUnlocked={true}
+                    progress={null}
+                  />
+                ))}
+
+              {/* Show next achievement to unlock with progress */}
+              {nextAchievement && (
                 <AchievementRow
-                  key={achievement.id}
-                  achievement={achievement}
-                  isUnlocked={true}
-                  progress={null}
+                  key={nextAchievement.id}
+                  achievement={nextAchievement}
+                  isUnlocked={false}
+                  progress={getProgress(nextAchievement.id)}
                 />
-              ))}
+              )}
 
-            {/* Show next achievement to unlock with progress */}
-            {nextAchievement && (
-              <AchievementRow
-                key={nextAchievement.id}
-                achievement={nextAchievement}
-                isUnlocked={false}
-                progress={getProgress(nextAchievement.id)}
-              />
-            )}
-
-            {/* Show mystery placeholders for remaining locked achievements */}
-            {achievementList
-              .filter((a) => !a.isUnlocked && a.id !== nextAchievement?.id)
-              .map((achievement) => (
-                <div key={achievement.id} className={`${styles.achievementRow} ${styles.achievementHidden}`}>
-                  <span className={styles.achievementIcon}>{'\u2606'}</span>
-                  <div className={styles.achievementInfo}>
-                    <span className={styles.achievementTitle}>???</span>
+              {/* Show mystery placeholders for remaining locked achievements */}
+              {achievementList
+                .filter((a) => !a.isUnlocked && a.id !== nextAchievement?.id)
+                .map((achievement) => (
+                  <div key={achievement.id} className={`${styles.achievementRow} ${styles.achievementHidden}`}>
+                    <span className={styles.achievementIcon}>{'\u2606'}</span>
+                    <div className={styles.achievementInfo}>
+                      <span className={styles.achievementTitle}>???</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+            </div>
           </div>
-        </div>
 
-        {/* Theme Selector */}
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>THEME</div>
-          <select
-            className={styles.themeSelect}
-            value={theme}
-            onChange={(e) => setTheme(e.target.value as ThemeId)}
-          >
-            {ALL_THEMES.map((t) => (
-              <option key={t.id} value={t.id} disabled={!isThemeUnlocked(t.id)}>
-                {t.name}
-                {!isThemeUnlocked(t.id) && ' (Locked)'}
-              </option>
-            ))}
-          </select>
-        </div>
+          {/* Theme Selector */}
+          <div className={styles.section}>
+            <div className={styles.sectionHeader}>THEME</div>
+            <select
+              className={styles.themeSelect}
+              value={theme}
+              onChange={(e) => setTheme(e.target.value as ThemeId)}
+            >
+              {ALL_THEMES.map((t) => (
+                <option key={t.id} value={t.id} disabled={!isThemeUnlocked(t.id)}>
+                  {t.name}
+                  {!isThemeUnlocked(t.id) && ' (Locked)'}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* Remort Button */}
-        <div className={styles.section}>
-          <button className={styles.remortButton} onClick={onRemort} type="button">
-            REMORT - Start Fresh
-          </button>
+          {/* Remort Button */}
+          <div className={styles.section}>
+            <button className={styles.remortButton} onClick={onRemort} type="button">
+              REMORT - Start Fresh
+            </button>
+          </div>
         </div>
       </div>
     </>

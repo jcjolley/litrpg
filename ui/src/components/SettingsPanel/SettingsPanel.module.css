@@ -20,23 +20,23 @@
 .panel {
   position: fixed;
   top: 0;
-  right: 0;
+  left: 0;
   width: 400px;
   max-width: 100vw;
   height: 100vh;
   overflow-y: auto;
   background: linear-gradient(180deg, var(--ff-blue-mid) 0%, var(--ff-blue-dark) 100%);
-  border-left: 4px solid var(--ff-border-outer);
+  border-right: 4px solid var(--ff-border-outer);
   box-shadow:
-    inset 4px 0 0 0 var(--ff-border-inner),
-    -8px 0 32px rgba(0, 0, 0, 0.8);
+    inset -4px 0 0 0 var(--ff-border-inner),
+    8px 0 32px rgba(0, 0, 0, 0.8);
   z-index: 401;
   animation: slideIn 0.3s ease-out;
 }
 
 @keyframes slideIn {
   from {
-    transform: translateX(100%);
+    transform: translateX(-100%);
   }
   to {
     transform: translateX(0);

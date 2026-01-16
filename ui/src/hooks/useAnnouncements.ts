@@ -18,6 +18,7 @@ interface UseAnnouncementsResult {
   unreadCount: number;
   readCount: number;
   markAllRead: () => void;
+  isRead: (id: string) => boolean;
   getVote: (id: string) => VoteType | null;
   vote: (id: string, direction: VoteType) => void;
   refetch: () => Promise<void>;
@@ -107,6 +108,11 @@ export function useAnnouncements(): UseAnnouncementsResult {
     });
   }, [announcements]);
 
+  const isRead = useCallback(
+    (id: string): boolean => readIds.includes(id),
+    [readIds]
+  );
+
   const getVote = useCallback(
     (id: string): VoteType | null => votes[id] || null,
     [votes]
@@ -165,6 +171,7 @@ export function useAnnouncements(): UseAnnouncementsResult {
     unreadCount,
     readCount,
     markAllRead,
+    isRead,
     getVote,
     vote,
     refetch,

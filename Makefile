@@ -176,24 +176,44 @@ migrate-genres-local:
 	./gradlew :curator:run --args="migrate-genres --dynamo http://localhost:4566"
 
 # Create an announcement (production)
-# Usage: make announce TITLE="New Feature" BODY="We added dark mode!"
+# Usage: make announce TITLE="New Feature" FILE=path/to/body.txt
+# Or:    make announce TITLE="New Feature" BODY="Short body text"
 announce: aws-login
-	@if [ -z "$(TITLE)" ] || [ -z "$(BODY)" ]; then \
-		echo "Usage: make announce TITLE=\"title\" BODY=\"body\""; \
+	@if [ -z "$(TITLE)" ]; then \
+		echo "Usage: make announce TITLE=\"title\" FILE=path/to/body.txt"; \
+		echo "   or: make announce TITLE=\"title\" BODY=\"body\""; \
 		exit 1; \
 	fi
-	eval "$$(aws configure export-credentials --format env)" && \
-		AWS_REGION=us-west-2 \
-		./gradlew :curator:run --args="announce '$(TITLE)' '$(BODY)'"
+	@if [ -n "$(FILE)" ]; then \
+		eval "$$(aws configure export-credentials --format env)" && \
+			AWS_REGION=us-west-2 \
+			./gradlew :curator:run --args="announce '$(TITLE)' --file '$(FILE)'"; \
+	elif [ -n "$(BODY)" ]; then \
+		eval "$$(aws configure export-credentials --format env)" && \
+			AWS_REGION=us-west-2 \
+			./gradlew :curator:run --args="announce '$(TITLE)' '$(BODY)'"; \
+	else \
+		echo "Must provide FILE or BODY"; \
+		exit 1; \
+	fi
 
 # Create an announcement (local)
-# Usage: make announce-local TITLE="Test" BODY="Testing locally"
+# Usage: make announce-local TITLE="Test" FILE=path/to/body.txt
+# Or:    make announce-local TITLE="Test" BODY="Short body text"
 announce-local:
-	@if [ -z "$(TITLE)" ] || [ -z "$(BODY)" ]; then \
-		echo "Usage: make announce-local TITLE=\"title\" BODY=\"body\""; \
+	@if [ -z "$(TITLE)" ]; then \
+		echo "Usage: make announce-local TITLE=\"title\" FILE=path/to/body.txt"; \
+		echo "   or: make announce-local TITLE=\"title\" BODY=\"body\""; \
 		exit 1; \
 	fi
-	./gradlew :curator:run --args="announce '$(TITLE)' '$(BODY)' --dynamo http://localhost:4566"
+	@if [ -n "$(FILE)" ]; then \
+		./gradlew :curator:run --args="announce '$(TITLE)' --file '$(FILE)' --dynamo http://localhost:4566"; \
+	elif [ -n "$(BODY)" ]; then \
+		./gradlew :curator:run --args="announce '$(TITLE)' '$(BODY)' --dynamo http://localhost:4566"; \
+	else \
+		echo "Must provide FILE or BODY"; \
+		exit 1; \
+	fi
 
 # Show all available commands
 help:
@@ -224,7 +244,7 @@ help:
 	@echo "  make refresh ID=<id>  Re-scrape a book"
 	@echo "  make export-prod      Export to data/books-prod.json"
 	@echo "  make migrate-genres   Migrate books to multi-genre system"
-	@echo "  make announce TITLE=\"...\" BODY=\"...\"  Create announcement"
+	@echo "  make announce TITLE=\"...\" FILE=...  Create announcement from file"
 	@echo ""
 	@echo "Curator (Local):"
 	@echo "  make list-local       List books in LocalStack"
@@ -232,7 +252,7 @@ help:
 	@echo "  make import-local     Import from data/books-prod.json"
 	@echo "  make setup-local-prod Export prod + import to local"
 	@echo "  make migrate-genres-local  Migrate local books to multi-genre"
-	@echo "  make announce-local TITLE=\"...\" BODY=\"...\"  Create local announcement"
+	@echo "  make announce-local TITLE=\"...\" FILE=...  Create local announcement from file"
 	@echo ""
 	@echo "Git Worktree (Multi-Session):"
 	@echo "  make ship             Test, merge to main, push, cleanup (run from worktree)"

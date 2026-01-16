@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Book } from '../types/book';
 import { getBooks, type BookFilters, type CategoryFilters, EMPTY_FILTERS, getFilterValues } from '../api/books';
-import { groupBooksBySeries } from '../utils/seriesGrouping';
+import { groupBooksBySeries, type SeriesDisplayMode } from '../utils/seriesGrouping';
 
 const FILTERS_KEY = 'litrpg-filters';
 const BOOKS_CACHE_KEY = 'litrpg-books-cache';
@@ -16,7 +16,8 @@ function migrateOldFilters(stored: unknown): BookFilters {
 
   // Check if already in new format (has nested objects with filter states)
   if (old.genre && typeof old.genre === 'object' && !Array.isArray(old.genre)) {
-    return stored as BookFilters;
+    // Merge with EMPTY_FILTERS to ensure new fields (like seriesPosition) have defaults
+    return { ...EMPTY_FILTERS, ...(stored as BookFilters) };
   }
 
   // Migrate old format: { genre: "Cultivation" } -> { genre: { "Cultivation": "include" } }
@@ -102,9 +103,13 @@ function getBookValues(book: Book, category: keyof BookFilters): string[] {
 
 // Apply tri-state filters to books
 // For multi-value categories (genre): OR logic for includes, ANY match excludes
+// Special handling for seriesPosition filter (handled separately after grouping)
 function applyFilters(books: Book[], filters: BookFilters): Book[] {
   return books.filter(book => {
     for (const [category, categoryFilters] of Object.entries(filters) as [keyof BookFilters, CategoryFilters][]) {
+      // Skip seriesPosition - it's handled separately after series grouping
+      if (category === 'seriesPosition') continue;
+
       const includes = getFilterValues(categoryFilters, 'include');
       const excludes = getFilterValues(categoryFilters, 'exclude');
 
@@ -199,10 +204,16 @@ export function useBooks(): UseBooksResult {
   // Apply filters client-side
   const filteredBooks = useMemo(() => applyFilters(allBooks, filters), [allBooks, filters]);
 
-  // Group filtered books by series - only show first book of each series
+  // Determine series display mode from filters
+  const seriesDisplayMode: SeriesDisplayMode = useMemo(() => {
+    const latestIncluded = filters.seriesPosition?.latest === 'include';
+    return latestIncluded ? 'latest' : 'first';
+  }, [filters.seriesPosition]);
+
+  // Group filtered books by series - show first or latest book based on filter
   const { visibleBooks: books, seriesMap } = useMemo(
-    () => groupBooksBySeries(filteredBooks),
-    [filteredBooks]
+    () => groupBooksBySeries(filteredBooks, seriesDisplayMode),
+    [filteredBooks, seriesDisplayMode]
   );
 
   const handleSetFilters = useCallback((newFilters: BookFilters) => {

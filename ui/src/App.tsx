@@ -49,6 +49,7 @@ export default function App() {
     unreadCount,
     readCount: announcementsReadCount,
     markAllRead,
+    isRead: isAnnouncementRead,
     getVote: getAnnouncementVote,
     vote: voteAnnouncement,
   } = useAnnouncements();
@@ -91,7 +92,7 @@ export default function App() {
   }, [books, completed, seenBookIds, wishlist, settings]);
 
   // Get carousel books (max 30) from the holding cell
-  const { carouselBooks, removeBook, refresh: refreshCarousel } = useCarouselPool({
+  const { carouselBooks, removeBook } = useCarouselPool({
     holdingCell,
     seenBookIds,
     notInterestedIds,
@@ -397,6 +398,18 @@ export default function App() {
     [setFilters, trackGenreExplored, showAchievementNotification]
   );
 
+  // Handle clicking a genre tag on a book card - filter to that genre
+  const handleGenreClick = useCallback(
+    (genre: string) => {
+      const newFilters = {
+        ...filters,
+        genre: { [genre]: 'include' as const },
+      };
+      handleFiltersChange(newFilters);
+    },
+    [filters, handleFiltersChange]
+  );
+
   // Watch for completionist achievement (auto-unlocked when all others are obtained)
   useEffect(() => {
     if (pendingCompletionist) {
@@ -448,6 +461,15 @@ export default function App() {
           >
             <span role="img" aria-label="journal">&#128220;</span>
           </button>
+          <button
+            className="stats-button"
+            onClick={() => setShowSettingsPanel(true)}
+            disabled={showOnboarding}
+            type="button"
+            title="Settings"
+          >
+            <span role="img" aria-label="settings">&#9881;</span>
+          </button>
           <FilterMenu
             filters={filters}
             onFiltersChange={handleFiltersChange}
@@ -459,15 +481,6 @@ export default function App() {
             unreadCount={unreadCount}
             onClick={() => setShowAnnouncementsPanel(true)}
           />
-          <button
-            className="stats-button"
-            onClick={() => setShowSettingsPanel(true)}
-            disabled={showOnboarding}
-            type="button"
-            title="Settings"
-          >
-            <span role="img" aria-label="settings">&#9881;</span>
-          </button>
           <button
             className="stats-button"
             onClick={() => setShowPrivacyPolicy(true)}
@@ -503,6 +516,7 @@ export default function App() {
             onIgnore={handleIgnore}
             onCoverClick={handleCoverClick}
             onVote={handleVote}
+            onGenreClick={handleGenreClick}
             selectedBookId={selectedBook?.id}
             isCompleted={selectedBook ? isCompleted(selectedBook.id) : false}
             continuousSpin={showOnboarding}
@@ -566,6 +580,7 @@ export default function App() {
           onClose={handleCloseAnnouncements}
           announcements={announcements}
           isLoading={announcementsLoading}
+          isRead={isAnnouncementRead}
           getVote={getAnnouncementVote}
           onVote={voteAnnouncement}
         />

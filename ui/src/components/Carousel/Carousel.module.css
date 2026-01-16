@@ -188,7 +188,6 @@
   color: var(--ff-text-primary);
   margin: 0;
   line-height: 1.2;
-  padding-right: clamp(80px, 15cqi, 160px);
   flex-shrink: 0;
 }
 
@@ -267,10 +266,28 @@
   flex-shrink: 0;
 }
 
-/* Vote buttons - top right corner */
+.genreLink {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  transition: all 0.15s ease;
+}
+
+.genreLink:hover {
+  text-decoration-style: solid;
+  filter: brightness(1.2);
+}
+
+.genreLink:focus {
+  outline: 1px dashed var(--ff-text-highlight);
+  outline-offset: 2px;
+}
+
+/* Vote buttons - bottom right corner */
 .voteButtonsCorner {
   position: absolute;
-  top: clamp(0.25rem, 1cqi, 0.75rem);
+  bottom: clamp(0.25rem, 1cqi, 0.75rem);
   right: clamp(0.25rem, 1cqi, 0.75rem);
   display: flex;
   align-items: center;

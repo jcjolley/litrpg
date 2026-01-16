@@ -131,17 +131,44 @@
   background: rgba(0, 0, 0, 0.2);
   border: 2px solid var(--ff-border-inner);
   border-radius: 8px;
-  padding: var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  overflow: hidden;
 }
 
-.cardHeader {
+.cardCollapsed {
+  opacity: 0.7;
+}
+
+.cardCollapsed:hover {
+  opacity: 1;
+}
+
+.cardExpanded {
+  opacity: 1;
+}
+
+.cardHeaderButton {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--spacing-md);
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.15s ease;
+}
+
+.cardHeaderButton:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.cardExpandArrow {
+  font-size: 10px;
+  color: var(--ff-text-muted);
+  flex-shrink: 0;
 }
 
 .cardTitle {
@@ -153,18 +180,34 @@
   line-height: 1.3;
 }
 
+.cardDate {
+  font-size: 9px;
+  color: var(--ff-text-muted);
+  flex-shrink: 0;
+}
+
+.cardContent {
+  padding: 0 var(--spacing-md) var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
 .cardBody {
   font-size: 10px;
   line-height: 1.6;
   color: var(--ff-text-primary);
   margin: 0;
   white-space: pre-wrap;
+  flex-shrink: 0;
 }
 
-.cardDate {
-  font-size: 9px;
-  color: var(--ff-text-muted);
-  align-self: flex-end;
+.cardFooter {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--spacing-sm);
 }
 
 /* Vote Buttons */

@@ -14,9 +14,10 @@ export interface BookFilters {
   length: CategoryFilters;
   popularity: CategoryFilters;
   source: CategoryFilters;
+  seriesPosition: CategoryFilters;
 }
 
-// Empty filters constant
+// Empty filters constant - "First Book" is selected by default
 export const EMPTY_FILTERS: BookFilters = {
   genre: {},
   author: {},
@@ -24,6 +25,7 @@ export const EMPTY_FILTERS: BookFilters = {
   length: {},
   popularity: {},
   source: {},
+  seriesPosition: { first: 'include' },
 };
 
 export interface GetBooksOptions {

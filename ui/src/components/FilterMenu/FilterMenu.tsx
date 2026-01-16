@@ -66,6 +66,11 @@ const SOURCES = [
   { value: 'ROYAL_ROAD', label: 'WEB FICTION' },
 ];
 
+const SERIES_POSITIONS = [
+  { value: 'first', label: 'FIRST BOOK' },
+  { value: 'latest', label: 'LATEST BOOK' },
+];
+
 interface FilterMenuProps {
   filters: BookFilters;
   onFiltersChange: (filters: BookFilters) => void;
@@ -74,7 +79,7 @@ interface FilterMenuProps {
   disabled?: boolean;
 }
 
-type FilterRow = 'source' | 'author' | 'narrator' | 'genre' | 'length' | 'popularity' | 'discovery';
+type FilterRow = 'source' | 'author' | 'narrator' | 'genre' | 'length' | 'popularity' | 'series' | 'discovery';
 
 // Cycle through filter states: neutral -> include -> exclude -> neutral
 function cycleFilterState(current: FilterState | undefined): FilterState | undefined {
@@ -235,6 +240,15 @@ export function FilterMenu({ filters, onFiltersChange, popularityWeight, onPopul
     });
   }, [filters, onFiltersChange]);
 
+  // Handle clicking series position option - mutually exclusive (clicking one selects it)
+  const handleSeriesOptionClick = useCallback((value: string) => {
+    // Set the clicked option to 'include', remove the other
+    onFiltersChange({
+      ...filters,
+      seriesPosition: { [value]: 'include' },
+    });
+  }, [filters, onFiltersChange]);
+
   const handleClearAll = useCallback(() => {
     onFiltersChange(EMPTY_FILTERS);
   }, [onFiltersChange]);
@@ -286,7 +300,13 @@ export function FilterMenu({ filters, onFiltersChange, popularityWeight, onPopul
       'ROYAL_ROAD': 'WEB FICTION',
     };
 
+    const seriesLabelMap: Record<string, string> = {
+      'first': 'FIRST BOOK',
+      'latest': 'LATEST BOOK',
+    };
+
     addCategoryParts('source', sourceLabelMap);
+    addCategoryParts('seriesPosition', seriesLabelMap);
     addCategoryParts('author');
     addCategoryParts('narrator');
     addCategoryParts('genre');
@@ -342,6 +362,13 @@ export function FilterMenu({ filters, onFiltersChange, popularityWeight, onPopul
                 <span className={styles.categoryLabel}>SOURCE</span>
               </button>
               <button
+                className={`${styles.categoryRow} ${activeRow === 'series' ? styles.activeRow : ''} ${categoryHasFilters('seriesPosition') ? styles.hasFilters : ''}`}
+                onClick={() => handleRowClick('series')}
+              >
+                <span className={styles.cursor}>{activeRow === 'series' ? '▶' : ' '}</span>
+                <span className={styles.categoryLabel}>SERIES</span>
+              </button>
+              <button
                 className={`${styles.categoryRow} ${activeRow === 'author' ? styles.activeRow : ''} ${categoryHasFilters('author') ? styles.hasFilters : ''}`}
                 onClick={() => handleRowClick('author')}
               >
@@ -393,6 +420,22 @@ export function FilterMenu({ filters, onFiltersChange, popularityWeight, onPopul
               {activeRow === 'source' && (
                 <div className={styles.optionsList}>
                   {SOURCES.map(source => renderOption('source', source.value, source.label))}
+                </div>
+              )}
+              {activeRow === 'series' && (
+                <div className={styles.optionsList}>
+                  {SERIES_POSITIONS.map(pos => (
+                    <button
+                      key={pos.value}
+                      className={`${styles.optionItem} ${filters.seriesPosition?.[pos.value] === 'include' ? styles.optionInclude : ''}`}
+                      onClick={() => handleSeriesOptionClick(pos.value)}
+                    >
+                      {filters.seriesPosition?.[pos.value] === 'include' ? `+ ${pos.label}` : pos.label}
+                    </button>
+                  ))}
+                  <div className={styles.seriesHint}>
+                    Show the first or most recent book from each series
+                  </div>
                 </div>
               )}
               {activeRow === 'author' && (

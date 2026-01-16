@@ -17,6 +17,7 @@ interface CarouselTrackProps {
   onCardClick?: (index: number) => void;
   onVote?: (bookId: string, vote: VoteType) => void;
   onSeriesBookClick?: (book: Book) => void;
+  onGenreClick?: (genre: string) => void;
 }
 
 // Selection point - where the "featured" card sits (in degrees)
@@ -60,6 +61,7 @@ export function CarouselTrack({
   onCardClick,
   onVote,
   onSeriesBookClick,
+  onGenreClick,
 }: CarouselTrackProps) {
   const anglePerItem = 360 / books.length;
 
@@ -162,6 +164,7 @@ export function CarouselTrack({
               onCardClick={isAtCenter ? onCoverClick : undefined}
               onVote={onVote ? (vote) => onVote(book.id, vote) : undefined}
               onSeriesBookClick={onSeriesBookClick}
+              onGenreClick={isAtCenter ? onGenreClick : undefined}
             />
           </div>
         );

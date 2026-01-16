@@ -1,7 +1,9 @@
 import type { Book } from '../types/book';
 
+export type SeriesDisplayMode = 'first' | 'latest';
+
 export interface SeriesGroupResult {
-  /** Books to display in carousel: Book 1 of each series + standalone books */
+  /** Books to display in carousel based on mode + standalone books */
   visibleBooks: Book[];
   /** Map from series name (lowercase) to all books in that series, sorted by position */
   seriesMap: Map<string, Book[]>;
@@ -18,10 +20,13 @@ function normalizeSeriesName(series: string): string {
  * Groups books by series and returns visible books for carousel display.
  *
  * - Books with no series (standalone) are always visible
- * - For series, only the lowest-numbered book is visible
+ * - For series, shows first or latest book based on mode
  * - seriesMap contains all books grouped by series for tooltip display
+ *
+ * @param books - The filtered books to group
+ * @param mode - 'first' shows lowest-numbered book, 'latest' shows highest-numbered book
  */
-export function groupBooksBySeries(books: Book[]): SeriesGroupResult {
+export function groupBooksBySeries(books: Book[], mode: SeriesDisplayMode = 'first'): SeriesGroupResult {
   const seriesMap = new Map<string, Book[]>();
   const standaloneBooks: Book[] = [];
 
@@ -59,12 +64,14 @@ export function groupBooksBySeries(books: Book[]): SeriesGroupResult {
     seriesMap.set(key, seriesBooks);
   }
 
-  // Build visible books: lowest-numbered book from each series + standalones
+  // Build visible books based on mode + standalones
   const visibleBooks: Book[] = [...standaloneBooks];
 
   for (const seriesBooks of seriesMap.values()) {
     if (seriesBooks.length > 0) {
-      visibleBooks.push(seriesBooks[0]);
+      // 'first' = index 0 (lowest position), 'latest' = last index (highest position)
+      const bookToShow = mode === 'first' ? seriesBooks[0] : seriesBooks[seriesBooks.length - 1];
+      visibleBooks.push(bookToShow);
     }
   }
 

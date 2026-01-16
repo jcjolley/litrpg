@@ -44,6 +44,7 @@ interface CarouselProps {
   onIgnore?: () => void;
   onCoverClick?: () => void;
   onVote?: (bookId: string, vote: VoteType) => void;
+  onGenreClick?: (genre: string) => void;
   selectedBookId?: string | null;
   isCompleted?: boolean; // Whether the selected book is marked as completed
   continuousSpin?: boolean; // When true, spin indefinitely until released
@@ -65,6 +66,7 @@ export function Carousel({
   onIgnore,
   onCoverClick,
   onVote,
+  onGenreClick,
   selectedBookId,
   isCompleted = false,
   continuousSpin = false,
@@ -279,11 +281,12 @@ export function Carousel({
     }
   }, [triggerSpin]);
 
-  // When the base books list changes (e.g., due to filter), clear any series swaps
-  // since they may no longer be valid
+  // When the base books list changes (e.g., due to filter), clear series swaps
+  // BUT preserve the injection for the currently selected book (if any)
+  // This prevents the selected book from disappearing when clicking a genre tag
   useEffect(() => {
-    setInjectedBooks([]);
-  }, [booksProp]);
+    setInjectedBooks(prev => prev.filter(({ book }) => book.id === selectedBookId));
+  }, [booksProp, selectedBookId]);
 
   // When books change (e.g., due to filter), check if current selection is still valid
   // If the selected book is no longer in the list, spin to a new book
@@ -292,13 +295,14 @@ export function Carousel({
     if (spinState !== 'stopped' || selectedBookId === null || selectedBookId === undefined) return;
 
     // Check if the currently selected book is still in the books array
-    const bookStillExists = booksProp.some(book => book.id === selectedBookId);
+    // Use `books` (which includes injections) instead of `booksProp`
+    const bookStillExists = books.some(book => book.id === selectedBookId);
 
-    if (!bookStillExists && booksProp.length > 0) {
+    if (!bookStillExists && books.length > 0) {
       // Selected book was removed (probably by a filter), spin to a new one
       doSpin();
     }
-  }, [booksProp, selectedBookId, spinState, doSpin]);
+  }, [books, selectedBookId, spinState, doSpin]);
 
   const isInWishlist = selectedBookId ? userWishlist.includes(selectedBookId) : false;
   const showActions = spinState === 'stopped' && selectedIndex !== null;
@@ -340,6 +344,7 @@ export function Carousel({
           onCardClick={handleCardClick}
           onVote={onVote}
           onSeriesBookClick={handleSeriesBookClick}
+          onGenreClick={onGenreClick}
         />
       </div>
 

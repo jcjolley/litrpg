@@ -151,6 +151,7 @@ describe('useBooks', () => {
         length: {},
         popularity: {},
         source: {},
+        seriesPosition: { first: 'include' },
       });
     });
 
@@ -186,6 +187,7 @@ describe('useBooks', () => {
         length: {},
         popularity: {},
         source: {},
+        seriesPosition: { first: 'include' },
       });
     });
 
@@ -244,6 +246,7 @@ describe('useBooks', () => {
       length: {},
       popularity: {},
       source: {},
+      seriesPosition: { first: 'include' as const },
     };
 
     act(() => {

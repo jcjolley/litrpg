@@ -15,6 +15,7 @@ interface BookCardProps {
   onCardClick?: () => void;
   onVote?: (vote: VoteType) => void;
   onSeriesBookClick?: (book: Book) => void;  // Navigate to another book in series
+  onGenreClick?: (genre: string) => void;  // Filter by this genre
 }
 
 export function BookCard({
@@ -27,6 +28,7 @@ export function BookCard({
   onCardClick,
   onVote,
   onSeriesBookClick,
+  onGenreClick,
 }: BookCardProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const hoverTimeoutRef = useRef<number | null>(null);
@@ -34,6 +36,11 @@ export function BookCard({
   const handleVoteClick = (e: React.MouseEvent, vote: VoteType) => {
     e.stopPropagation(); // Prevent card click
     onVote?.(vote);
+  };
+
+  const handleGenreClick = (e: React.MouseEvent, genre: string) => {
+    e.stopPropagation(); // Prevent card click
+    onGenreClick?.(genre);
   };
 
   // Check if this book has multiple books in its series
@@ -189,7 +196,20 @@ export function BookCard({
 
         {book.genres.length > 0 && (
           <p className={styles.cardLargeGenres}>
-            {book.genres.join(' • ')}
+            {book.genres.map((genre, index) => (
+              <span key={genre}>
+                {index > 0 && ' • '}
+                <span
+                  className={onGenreClick ? styles.genreLink : undefined}
+                  onClick={onGenreClick ? (e) => handleGenreClick(e, genre) : undefined}
+                  role={onGenreClick ? 'button' : undefined}
+                  tabIndex={onGenreClick ? 0 : undefined}
+                  data-interactive={onGenreClick ? true : undefined}
+                >
+                  {genre}
+                </span>
+              </span>
+            ))}
           </p>
         )}
 
