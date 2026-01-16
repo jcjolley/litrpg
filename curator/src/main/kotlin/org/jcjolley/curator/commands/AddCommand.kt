@@ -186,7 +186,12 @@ class AddCommand : CliktCommand(name = "add") {
         echo("───────────────────────────────────────────────────")
         echo(result.blurb)
         echo("───────────────────────────────────────────────────")
-        echo("(${result.wordCount} words, genre: ${result.facts.genre ?: "unknown"})")
+        val genresDisplay = if (result.facts.genres.isNotEmpty()) {
+            result.facts.genres.joinToString(", ")
+        } else {
+            "unknown"
+        }
+        echo("(${result.wordCount} words, genres: $genresDisplay)")
 
         if (!result.isValid()) {
             echo("")
@@ -272,8 +277,8 @@ class AddCommand : CliktCommand(name = "add") {
             clickThroughCount = existing?.clickThroughCount ?: 0,
             notInterestedCount = existing?.notInterestedCount ?: 0,
             impressionCount = existing?.impressionCount ?: 0,
-            // GSI filter fields
-            genre = facts.genre,
+            // Multi-genre support
+            genres = facts.genres,
             lengthMinutes = lengthMinutes,
             lengthCategory = lengthCategory,
             // Preserve original addedAt if updating
@@ -304,8 +309,8 @@ class AddCommand : CliktCommand(name = "add") {
             clickThroughCount = existing?.clickThroughCount ?: 0,
             notInterestedCount = existing?.notInterestedCount ?: 0,
             impressionCount = existing?.impressionCount ?: 0,
-            // GSI filter fields
-            genre = facts.genre,
+            // Multi-genre support
+            genres = facts.genres,
             // Preserve original addedAt if updating
             addedAt = existing?.addedAt ?: now,
             updatedAt = now

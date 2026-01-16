@@ -9,7 +9,7 @@ export interface Book {
   narrator: string | null;
   series: string | null;
   seriesPosition: number | null;
-  genre: string | null;            // Book genre/category
+  genres: string[];                 // Book genres (1-5 per book)
   length: string | null;           // Audio length (Audible only)
   releaseDate: string | null;
   language: string;

@@ -1,7 +1,7 @@
 # Makefile for LitRPG project
 SHELL := /bin/bash
 
-.PHONY: build build-lambda build-ui deploy-ui deploy test test-class clean aws-login stats stats-local list list-local add remove refresh export-prod import-local setup-local-prod localstack localstack-init localstack-down curator curator-local help
+.PHONY: build build-lambda build-ui deploy-ui deploy test test-class clean aws-login stats stats-local list list-local add remove refresh export-prod import-local setup-local-prod localstack localstack-init localstack-down curator curator-local migrate-genres migrate-genres-local help
 
 # Check AWS credentials and login if needed
 aws-login:
@@ -14,7 +14,7 @@ aws-login:
 
 # Build native Lambda function for AWS deployment
 build-lambda:
-	./gradlew build -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true -x test
+	gradlew build -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true -x test
 
 # Build UI for production
 build-ui:
@@ -41,11 +41,11 @@ deploy: build-lambda build-ui deploy-infra deploy-ui
 
 # Build everything (no native, for local dev)
 build:
-	./gradlew build -x test
+	gradlew build -x test
 
 # Run all tests (requires LocalStack running)
 test: localstack-init
-	./gradlew test
+	gradlew test
 
 # Run a specific test class
 # Usage: make test-class CLASS=BooksQueryTest
@@ -54,7 +54,7 @@ test-class: localstack-init
 		echo "Usage: make test-class CLASS=<TestClassName>"; \
 		exit 1; \
 	fi
-	./gradlew test --tests "*.$(CLASS)"
+	gradlew test --tests "*.$(CLASS)"
 
 # Start LocalStack and initialize DynamoDB table
 localstack-init: localstack
@@ -63,7 +63,7 @@ localstack-init: localstack
 
 # Clean build artifacts
 clean:
-	./gradlew clean
+	gradlew clean
 	rm -rf ui/dist
 
 # Start LocalStack container (idempotent)
@@ -87,21 +87,21 @@ dev:
 stats: aws-login
 	eval "$$(aws configure export-credentials --format env)" && \
 		AWS_REGION=us-west-2 \
-		./gradlew :curator:run --args="stats"
+		gradlew :curator:run --args="stats"
 
 # View analytics stats from local DynamoDB (LocalStack)
 stats-local:
-	./gradlew :curator:run --args="stats --dynamo http://localhost:4566"
+	gradlew :curator:run --args="stats --dynamo http://localhost:4566"
 
 # List all books in production
 list: aws-login
 	eval "$$(aws configure export-credentials --format env)" && \
 		AWS_REGION=us-west-2 \
-		./gradlew :curator:run --args="list"
+		gradlew :curator:run --args="list"
 
 # List all books in local DynamoDB
 list-local:
-	./gradlew :curator:run --args="list --dynamo http://localhost:4566"
+	gradlew :curator:run --args="list --dynamo http://localhost:4566"
 
 # Quick add/update a book from Audible or Royal Road URL
 # Usage: make add URL=https://www.audible.com/pd/Book-Title/B0XXXXXXXX
@@ -113,14 +113,14 @@ add: aws-login
 	fi
 	eval "$$(aws configure export-credentials --format env)" && \
 		AWS_REGION=us-west-2 \
-		./gradlew :curator:run --args="add -y $(URL)"
+		gradlew :curator:run --args="add -y $(URL)"
 
 # Export books from production DynamoDB to local file
 export-prod: aws-login
 	@echo "Exporting books from production DynamoDB..."
 	eval "$$(aws configure export-credentials --format env)" && \
 		AWS_REGION=us-west-2 \
-		./gradlew :curator:run --args="export -o ../data/books-prod.json"
+		gradlew :curator:run --args="export -o ../data/books-prod.json"
 	@echo "Exported to data/books-prod.json"
 
 # Import books from file to local DynamoDB (LocalStack)
@@ -130,7 +130,7 @@ import-local:
 		exit 1; \
 	fi
 	@echo "Importing books to LocalStack DynamoDB..."
-	./gradlew :curator:run --args="import ../data/books-prod.json --dynamo http://localhost:4566"
+	gradlew :curator:run --args="import ../data/books-prod.json --dynamo http://localhost:4566"
 
 # Full local setup with prod data: export from prod, import to local
 setup-local-prod: export-prod import-local
@@ -145,7 +145,7 @@ remove: aws-login
 	fi
 	eval "$$(aws configure export-credentials --format env)" && \
 		AWS_REGION=us-west-2 \
-		./gradlew :curator:run --args="remove $(ID)"
+		gradlew :curator:run --args="remove $(ID)"
 
 # Refresh a book (re-scrape and update)
 # Usage: make refresh ID=abc123
@@ -156,7 +156,17 @@ refresh: aws-login
 	fi
 	eval "$$(aws configure export-credentials --format env)" && \
 		AWS_REGION=us-west-2 \
-		./gradlew :curator:run --args="refresh $(ID)"
+		gradlew :curator:run --args="refresh $(ID)"
+
+# Migrate all books to multi-genre classification (production)
+migrate-genres: aws-login
+	eval "$$(aws configure export-credentials --format env)" && \
+		AWS_REGION=us-west-2 \
+		gradlew :curator:run --args="migrate-genres"
+
+# Migrate all books to multi-genre classification (local)
+migrate-genres-local:
+	gradlew :curator:run --args="migrate-genres --dynamo http://localhost:4566"
 
 # Show all available commands
 help:
@@ -184,9 +194,11 @@ help:
 	@echo "  make remove ID=<id>   Remove a book"
 	@echo "  make refresh ID=<id>  Re-scrape a book"
 	@echo "  make export-prod      Export to data/books-prod.json"
+	@echo "  make migrate-genres   Migrate books to multi-genre system"
 	@echo ""
 	@echo "Curator (Local):"
 	@echo "  make list-local       List books in LocalStack"
 	@echo "  make stats-local      View local analytics"
 	@echo "  make import-local     Import from data/books-prod.json"
 	@echo "  make setup-local-prod Export prod + import to local"
+	@echo "  make migrate-genres-local  Migrate local books to multi-genre"

@@ -177,6 +177,12 @@ export function BookCard({
           </span>
         </div>
 
+        {book.genres.length > 0 && (
+          <p className={styles.cardLargeGenres}>
+            {book.genres.join(' • ')}
+          </p>
+        )}
+
         <p className={styles.cardLargeDescription}>{book.description}</p>
 
         <div

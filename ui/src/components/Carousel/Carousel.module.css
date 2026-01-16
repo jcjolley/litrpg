@@ -257,6 +257,16 @@
   color: var(--ff-text-secondary);
 }
 
+.cardLargeGenres {
+  font-size: clamp(0.5rem, 1.25cqi, 0.75rem);
+  color: var(--ff-text-highlight);
+  margin: clamp(0.125rem, 0.5cqi, 0.25rem) 0;
+  opacity: 0.85;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
 /* Vote buttons - top right corner */
 .voteButtonsCorner {
   position: absolute;

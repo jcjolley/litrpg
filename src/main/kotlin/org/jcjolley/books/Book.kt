@@ -12,10 +12,8 @@ data class Book(
     var id: String = "",
     var title: String = "",
     var subtitle: String? = null,
-    @get:DynamoDbSecondaryPartitionKey(indexNames = ["author-index"])
     var author: String = "",
     var authorUrl: String? = null,
-    @get:DynamoDbSecondaryPartitionKey(indexNames = ["narrator-index"])
     var narrator: String? = null,
     var series: String? = null,
     var seriesPosition: Int? = null,
@@ -24,15 +22,12 @@ data class Book(
     var language: String = "English",
     var imageUrl: String = "",
     // Source-specific fields
-    @get:DynamoDbSecondaryPartitionKey(indexNames = ["source-index"])
     var source: String = "AUDIBLE",         // "AUDIBLE" or "ROYAL_ROAD"
     var audibleUrl: String? = null,
     var audibleAsin: String? = null,
     var royalRoadUrl: String? = null,
     var royalRoadId: String? = null,
-    @get:DynamoDbSecondarySortKey(indexNames = ["author-index", "length-index"])
     var rating: Double = 0.0,
-    @get:DynamoDbSecondarySortKey(indexNames = ["genre-index", "popularity-index"])
     var numRatings: Int = 0,
     var pageCount: Int? = null,             // Royal Road page count
     var description: String = "",
@@ -42,13 +37,12 @@ data class Book(
     var impressionCount: Int = 0,
     var upvoteCount: Int = 0,
     var downvoteCount: Int = 0,
-    // GSI filter fields
-    @get:DynamoDbSecondaryPartitionKey(indexNames = ["genre-index"])
-    var genre: String? = null,
+    // Multi-genre support (1-5 genres per book)
+    var genres: List<String> = emptyList(),
     var lengthMinutes: Int? = null,
-    @get:DynamoDbSecondaryPartitionKey(indexNames = ["length-index"])
     var lengthCategory: String? = null,
-    @get:DynamoDbSecondaryPartitionKey(indexNames = ["popularity-index", "addedAt-index"])
+    // GSI partition key - only used for addedAt-index now
+    @get:DynamoDbSecondaryPartitionKey(indexNames = ["addedAt-index"])
     var gsiPartition: String = "BOOK",
     @get:DynamoDbSecondarySortKey(indexNames = ["addedAt-index"])
     var addedAt: Long = Instant.now().toEpochMilli(),

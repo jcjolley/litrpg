@@ -208,8 +208,8 @@ data class BookEntity(
     var impressionCount: Int = 0,
     var upvoteCount: Int = 0,
     var downvoteCount: Int = 0,
-    // GSI filter fields
-    var genre: String? = null,
+    // Multi-genre support (1-5 genres per book)
+    var genres: List<String> = emptyList(),
     var lengthMinutes: Int? = null,
     var lengthCategory: String? = null,
     var gsiPartition: String = "BOOK",
@@ -246,7 +246,7 @@ fun Book.toEntity() = BookEntity(
     impressionCount = impressionCount,
     upvoteCount = upvoteCount,
     downvoteCount = downvoteCount,
-    genre = genre,
+    genres = genres,
     lengthMinutes = lengthMinutes,
     lengthCategory = lengthCategory,
     gsiPartition = gsiPartition,
@@ -282,7 +282,7 @@ fun BookEntity.toBook() = Book(
     impressionCount = impressionCount,
     upvoteCount = upvoteCount,
     downvoteCount = downvoteCount,
-    genre = genre,
+    genres = genres,
     lengthMinutes = lengthMinutes,
     lengthCategory = lengthCategory,
     gsiPartition = gsiPartition,

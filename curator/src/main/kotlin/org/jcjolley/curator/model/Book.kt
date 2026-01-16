@@ -42,8 +42,8 @@ data class Book(
     val upvoteCount: Int = 0,
     val downvoteCount: Int = 0,
 
-    // Filter/GSI fields
-    val genre: String? = null,              // e.g., "Cultivation", "System Apocalypse", "Time Loop"
+    // Multi-genre support (1-5 genres per book)
+    val genres: List<String> = emptyList(),
     val lengthMinutes: Int? = null,         // Parsed from length string (Audible)
     val lengthCategory: String? = null,     // Short/Medium/Long/Epic
     val gsiPartition: String = "BOOK",      // Fixed partition key for popularity GSI
@@ -110,5 +110,5 @@ data class BookFacts(
     val incitingIncident: String?,
     val goal: String?,
     val tone: String?,
-    val genre: String?
+    val genres: List<String> = emptyList()
 )
