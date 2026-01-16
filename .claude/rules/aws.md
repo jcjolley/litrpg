@@ -1,25 +1,19 @@
 # AWS Rules
 
-## SSO Credential Export
+## SSO Credential Handling
 
-The Java SDK doesn't support AWS SSO `login_session` directly. Export credentials before running commands:
-
-```bash
-eval "$(aws configure export-credentials --format env)" && AWS_REGION=us-west-2 <command>
-```
+The Java SDK doesn't support AWS SSO `login_session` directly. The Makefile handles credential export automatically via the `aws-login` target.
 
 ## Production Curator Commands
 
-```bash
-# Add book to production
-eval "$(aws configure export-credentials --format env)" && \
-  AWS_REGION=us-west-2 \
-  ./gradlew :curator:run --args="add -y https://www.audible.com/pd/Book-Title/B0XXXXXXXX"
+**IMPORTANT: Always use `make` targets, never run `gradlew` directly.**
 
-# Export from production
-eval "$(aws configure export-credentials --format env)" && \
-  AWS_REGION=us-west-2 \
-  ./gradlew :curator:run --args="export -o data/books.json"
+```bash
+make add URL=https://www.audible.com/pd/Book-Title/B0XXXXXXXX  # Add book
+make list           # List all books
+make export-prod    # Export to data/books-prod.json
+make stats          # View analytics
+make help           # Show all commands
 ```
 
 ## Local Development
@@ -31,9 +25,5 @@ For production Lambda, `QUARKUS_PROFILE=prod` uses IAM role credentials.
 ## Terraform
 
 ```bash
-cd terraform/environments/dev
-eval $(aws configure export-credentials --format env)
-terraform init
-terraform plan
-terraform apply
+make deploy-infra   # Apply Terraform (handles credentials automatically)
 ```

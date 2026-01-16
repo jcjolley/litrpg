@@ -24,19 +24,6 @@ import { recordImpression, recordClick, recordWishlist, recordNotInterested, rec
 import { getAffiliateUrl } from './config';
 import type { Book } from './types/book';
 
-// Pool management constants
-const MIN_FRESH_BOOKS = 20;        // Keep refilling until this many unseen books
-const SPINS_BEFORE_REFILL = 4;     // Also refill after N spins regardless
-
-// Calculate fresh book count from current state
-function calculateFreshBookCount(
-  books: Book[],
-  seenBookIds: Set<string>,
-  notInterestedIds: string[]
-): number {
-  return books.filter((b) => !seenBookIds.has(b.id) && !notInterestedIds.includes(b.id)).length;
-}
-
 type OnboardingPhase = 'initial' | 'snarky';
 
 export default function App() {
@@ -45,16 +32,13 @@ export default function App() {
   const achievementEffects = useAchievementEffects(unlockedAchievements);
 
   // Data hooks
-  const { books, loading, error, filters, setFilters, refillPool, incrementSpinCount, isRefilling } = useBooks();
+  const { books, loading, error, filters, setFilters } = useBooks();
   const { wishlist, addToWishlist, removeFromWishlist, count: wishlistCount } = useWishlist();
   const { notInterestedIds, addNotInterested, count: notInterestedCount } = useNotInterested();
   const { history, addToHistory, clearHistory } = useHistory();
   const { completed, addCompleted, clearCompleted, isCompleted, count: completedCount } = useCompleted();
   const { votes, getVote, setVote } = useVotes();
   const { settings, updateSettings } = useSettings();
-
-  // Track spins since last refill to prevent constant refilling
-  const spinsSinceLastRefill = useRef(0);
 
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [triggerSpin, setTriggerSpin] = useState(false);
@@ -91,16 +75,6 @@ export default function App() {
 
     return result;
   }, [books, notInterestedIds, completed, seenBookIds, wishlist, settings]);
-
-  // Refs to access latest state in callbacks without re-triggering effects
-  const booksRef = useRef(books);
-  const historyRef = useRef(history);
-  const notInterestedIdsRef = useRef(notInterestedIds);
-
-  // Keep refs in sync
-  useEffect(() => { booksRef.current = books; }, [books]);
-  useEffect(() => { historyRef.current = history; }, [history]);
-  useEffect(() => { notInterestedIdsRef.current = notInterestedIds; }, [notInterestedIds]);
 
   // Konami code detection: ↑ ↑ ↓ ↓ ← → ← → B A
   const konamiSequence = useRef<string[]>([]);
@@ -156,11 +130,8 @@ export default function App() {
     }
   }, []);
 
-  const handleBookSelected = useCallback(async (book: Book) => {
+  const handleBookSelected = useCallback((book: Book) => {
     setSelectedBook(book);
-
-    // Track spin count for pool refill
-    incrementSpinCount();
 
     // Track spin for speedReader achievement
     const speedReaderAchievement = trackSpin();
@@ -168,34 +139,11 @@ export default function App() {
       showAchievementNotification(speedReaderAchievement);
     }
 
-    // Record impression (fire and forget, don't await)
+    // Record impression (fire and forget)
     recordImpression(book.id).catch((err) => {
       console.error('Failed to record impression:', err);
     });
-
-    // Track spins for refill logic
-    spinsSinceLastRefill.current += 1;
-
-    // Check if pool needs refilling
-    // Only refill after SPINS_BEFORE_REFILL spins, OR if fresh count is critically low AND we've done at least 2 spins
-    if (!isRefilling) {
-      const currentSeenIds = new Set(historyRef.current.map((h) => h.bookId));
-      const freshCount = calculateFreshBookCount(
-        booksRef.current,
-        currentSeenIds,
-        notInterestedIdsRef.current
-      );
-
-      const shouldRefillBySpins = spinsSinceLastRefill.current >= SPINS_BEFORE_REFILL;
-      // Only check fresh count after at least 2 spins to avoid immediate re-refill
-      const shouldRefillByCount = spinsSinceLastRefill.current >= 2 && freshCount < MIN_FRESH_BOOKS;
-
-      if (shouldRefillBySpins || shouldRefillByCount) {
-        spinsSinceLastRefill.current = 0; // Reset counter
-        refillPool();
-      }
-    }
-  }, [incrementSpinCount, trackSpin, showAchievementNotification, isRefilling, refillPool]);
+  }, [trackSpin, showAchievementNotification]);
 
   const handleSpinStart = useCallback(() => {
     setSelectedBook(null);

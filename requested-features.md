@@ -1,0 +1,1 @@
+- After a spin completes, allow the user to swipe left or right on their mobile device (or arrow keys on the keyboard, or click on a card other than the primary card) to rotate the carousel one item to the left or right without spinning again

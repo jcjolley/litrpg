@@ -30,6 +30,6 @@ export interface Book {
   impressionCount: number;
   upvoteCount: number;
   downvoteCount: number;
-  addedAt: string;
-  updatedAt: string;
+  addedAt: number;      // Timestamp in millis
+  updatedAt: number;    // Timestamp in millis
 }

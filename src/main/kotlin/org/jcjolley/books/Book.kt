@@ -48,8 +48,9 @@ data class Book(
     var lengthMinutes: Int? = null,
     @get:DynamoDbSecondaryPartitionKey(indexNames = ["length-index"])
     var lengthCategory: String? = null,
-    @get:DynamoDbSecondaryPartitionKey(indexNames = ["popularity-index"])
+    @get:DynamoDbSecondaryPartitionKey(indexNames = ["popularity-index", "addedAt-index"])
     var gsiPartition: String = "BOOK",
+    @get:DynamoDbSecondarySortKey(indexNames = ["addedAt-index"])
     var addedAt: Long = Instant.now().toEpochMilli(),
     var updatedAt: Long = Instant.now().toEpochMilli()
 )

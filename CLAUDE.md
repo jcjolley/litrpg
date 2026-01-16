@@ -16,13 +16,20 @@ make build           # Build everything
 make deploy          # Full deployment to AWS
 
 # Curator CLI
-./gradlew :curator:run --args="list"
-./gradlew :curator:run --args="add <audible-url>"
-./gradlew :curator:run --args="--help"
-
-# Production AWS (prefix any command)
-eval "$(aws configure export-credentials --format env)" && AWS_REGION=us-west-2 <command>
+make list            # List all books (production)
+make list-local      # List all books (local)
+make add URL=<url>   # Add book from Audible/RoyalRoad
+make help            # Show all available commands
 ```
+
+## Build Tool Policy
+
+**NEVER run `gradlew`, `npm`, or `docker compose` directly.** Always use `make` targets.
+
+If functionality is missing from the Makefile, add a new target first. This ensures:
+- Consistent environment setup
+- Proper credential handling for AWS commands
+- Reproducible builds across environments
 
 ## Tech Stack
 
@@ -74,14 +81,14 @@ curator/src/main/kotlin/.../curator/
 
 - **Behavior tests over unit tests** - test real behavior, not isolated units
 - **Minimal mocking** - prefer real dependencies via containers
-- **Main API**: Quarkus Dev Services auto-provisions containers
+- **Main API**: External LocalStack for DynamoDB (Makefile manages), Quarkus Dev Services for Lambda simulation
 - **Curator**: Testcontainers with DynamoDB Local
 - **UI**: Testing Library + MSW (only acceptable mocking)
 
 ```bash
-./gradlew test                              # All tests
-./gradlew :curator:test                     # Curator only
-./gradlew test --tests "*.BookRepositoryTest"  # Single class
+make test                              # All tests (starts LocalStack + creates table)
+make test-class CLASS=BooksQueryTest   # Single test class
+make localstack-init                   # Manual: start LocalStack and create DynamoDB table
 ```
 
 ## Infrastructure

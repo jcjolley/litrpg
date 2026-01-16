@@ -1,7 +1,7 @@
 # Makefile for LitRPG project
 SHELL := /bin/bash
 
-.PHONY: build-lambda build-ui deploy-ui deploy test clean aws-login stats stats-local list list-local add remove refresh export-prod import-local setup-local-prod help
+.PHONY: build build-lambda build-ui deploy-ui deploy test test-class clean aws-login stats stats-local list list-local add remove refresh export-prod import-local setup-local-prod localstack localstack-init localstack-down curator curator-local help
 
 # Check AWS credentials and login if needed
 aws-login:
@@ -39,14 +39,44 @@ deploy-infra: aws-login
 # Full deployment: build and deploy everything
 deploy: build-lambda build-ui deploy-infra deploy-ui
 
-# Run all tests
-test:
+# Build everything (no native, for local dev)
+build:
+	./gradlew build -x test
+
+# Run all tests (requires LocalStack running)
+test: localstack-init
 	./gradlew test
+
+# Run a specific test class
+# Usage: make test-class CLASS=BooksQueryTest
+test-class: localstack-init
+	@if [ -z "$(CLASS)" ]; then \
+		echo "Usage: make test-class CLASS=<TestClassName>"; \
+		exit 1; \
+	fi
+	./gradlew test --tests "*.$(CLASS)"
+
+# Start LocalStack and initialize DynamoDB table
+localstack-init: localstack
+	@echo "Initializing LocalStack DynamoDB..."
+	@bash scripts/init-localstack.sh
 
 # Clean build artifacts
 clean:
 	./gradlew clean
 	rm -rf ui/dist
+
+# Start LocalStack container (idempotent)
+localstack:
+	@if ! docker ps | grep -q localstack; then \
+		echo "Starting LocalStack..."; \
+		docker compose up -d; \
+		sleep 3; \
+	fi
+
+# Stop LocalStack container
+localstack-down:
+	docker compose down
 
 # Local development: start Quarkus and UI dev servers
 dev:
@@ -134,7 +164,10 @@ help:
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev              Start local dev environment"
-	@echo "  make test             Run all tests"
+	@echo "  make test             Run all tests (starts LocalStack if needed)"
+	@echo "  make test-class CLASS=<name>  Run single test class"
+	@echo "  make localstack       Start LocalStack container"
+	@echo "  make localstack-init  Start LocalStack and create DynamoDB table"
 	@echo "  make clean            Clean build artifacts"
 	@echo ""
 	@echo "Build & Deploy:"

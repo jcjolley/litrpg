@@ -270,4 +270,25 @@ class BooksService(
             (prefixMatches.sorted() + substringMatches.sorted()).take(limit)
         }
     }
+
+    /**
+     * Get books added after a given timestamp using the addedAt-index GSI.
+     * Returns books sorted by addedAt ascending (oldest first).
+     */
+    fun getBooksAddedSince(since: Long, limit: Int = 1000): List<Book> {
+        val index = bookTable.index("addedAt-index")
+        val queryConditional = QueryConditional.sortGreaterThan(
+            Key.builder()
+                .partitionValue("BOOK")
+                .sortValue(since)
+                .build()
+        )
+        return index.query { r ->
+            r.queryConditional(queryConditional)
+                .scanIndexForward(true)  // Ascending by addedAt
+                .limit(limit)
+        }.flatMap { it.items() }
+            .take(limit)
+            .toList()
+    }
 }

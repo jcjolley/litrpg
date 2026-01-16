@@ -10,13 +10,20 @@
 
 | Module | Approach |
 |--------|----------|
-| Main API | Quarkus Dev Services auto-provisions DynamoDB, LocalStack |
+| Main API | External LocalStack for DynamoDB + Quarkus Dev Services for Lambda simulation |
 | Curator CLI | Testcontainers with manually configured DynamoDB Local |
 | UI (React) | Testing Library + MSW for API mocking |
 
-## Quarkus Dev Services
+## Main API Testing
 
-Running `./gradlew quarkusDev` or `./gradlew test` auto-starts required containers. No manual setup needed.
+**DynamoDB**: Uses external LocalStack (started via `make localstack-init`)
+- Avoids Windows/Podman issues with Testcontainers file mounts
+- Table created by `scripts/init-localstack.sh` with all 7 GSIs
+- `quarkus.dynamodb.devservices.enabled=false` in test config
+
+**Lambda**: Quarkus Dev Services handles Lambda simulation automatically
+
+**Table:** `litrpg-books-dev` (shared with local dev)
 
 ## Testcontainers Pattern (Curator)
 
@@ -25,7 +32,7 @@ See `curator/src/test/kotlin/org/jcjolley/curator/repository/BookRepositoryTest.
 ## Commands
 
 ```bash
-./gradlew test                    # All tests
-./gradlew :curator:test           # Curator module only
-./gradlew test --tests "*.BookRepositoryTest"  # Single class
+make test                              # All tests (auto-starts LocalStack)
+make test-class CLASS=BooksQueryTest   # Single test class
+make localstack-init                   # Start LocalStack and create table
 ```

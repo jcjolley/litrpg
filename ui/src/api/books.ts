@@ -27,13 +27,13 @@ export const EMPTY_FILTERS: BookFilters = {
 };
 
 export interface GetBooksOptions {
-  limit?: number;
+  since?: number;  // Timestamp in millis - only fetch books added after this time
 }
 
 export async function getBooks(options: GetBooksOptions = {}): Promise<Book[]> {
   const params = new URLSearchParams();
-  if (options.limit) {
-    params.set('limit', options.limit.toString());
+  if (options.since) {
+    params.set('since', options.since.toString());
   }
   const query = params.toString();
   return fetchApi<Book[]>(query ? `/books?${query}` : '/books');

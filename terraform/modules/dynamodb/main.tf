@@ -60,6 +60,11 @@ resource "aws_dynamodb_table" "books" {
     type = "S"
   }
 
+  attribute {
+    name = "addedAt"
+    type = "N"
+  }
+
   # GSI 1: Query by author, sorted by rating (descending)
   global_secondary_index {
     name            = "author-index"
@@ -120,6 +125,14 @@ resource "aws_dynamodb_table" "books" {
   global_secondary_index {
     name            = "royalRoadUrl-index"
     hash_key        = "royalRoadUrl"
+    projection_type = "ALL"
+  }
+
+  # GSI 9: Query books by addedAt timestamp for incremental sync
+  global_secondary_index {
+    name            = "addedAt-index"
+    hash_key        = "gsiPartition"
+    range_key       = "addedAt"
     projection_type = "ALL"
   }
 

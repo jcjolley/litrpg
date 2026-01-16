@@ -1,11 +1,9 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Book } from '../types/book';
 import { getBooks, type BookFilters, type CategoryFilters, EMPTY_FILTERS, getFilterValues } from '../api/books';
 
 const FILTERS_KEY = 'litrpg-filters';
-
-// Pool management constants
-const POOL_SIZE = 30;              // Books per fetch
+const BOOKS_CACHE_KEY = 'litrpg-books-cache';
 
 // Migrate old single-value filters to new tri-state format
 function migrateOldFilters(stored: unknown): BookFilters {
@@ -41,6 +39,29 @@ function loadStoredFilters(): BookFilters {
   } catch {
     return EMPTY_FILTERS;
   }
+}
+
+function loadCachedBooks(): Book[] {
+  try {
+    const stored = localStorage.getItem(BOOKS_CACHE_KEY);
+    if (!stored) return [];
+    return JSON.parse(stored);
+  } catch {
+    return [];
+  }
+}
+
+function saveBooksToCache(books: Book[]): void {
+  try {
+    localStorage.setItem(BOOKS_CACHE_KEY, JSON.stringify(books));
+  } catch (err) {
+    console.error('Failed to save books to localStorage:', err);
+  }
+}
+
+function getMaxAddedAt(books: Book[]): number {
+  if (books.length === 0) return 0;
+  return Math.max(...books.map((b) => b.addedAt || 0));
 }
 
 // Special value for uncategorized items (null genre, etc.)
@@ -106,39 +127,56 @@ function applyFilters(books: Book[], filters: BookFilters): Book[] {
 }
 
 interface UseBooksResult {
-  books: Book[];           // Filtered books
-  allBooks: Book[];        // All books (unfiltered)
+  books: Book[];           // Filtered books for display
+  allBooks: Book[];        // All books (unfiltered) - the full catalog
   loading: boolean;
   error: Error | null;
   filters: BookFilters;
   setFilters: (filters: BookFilters) => void;
   refetch: () => Promise<void>;
-  // Pool management
-  refillPool: () => Promise<void>;
-  spinCount: number;
-  incrementSpinCount: () => void;
-  isRefilling: boolean;
 }
 
 export function useBooks(): UseBooksResult {
-  const [allBooks, setAllBooks] = useState<Book[]>([]);
+  const [allBooks, setAllBooks] = useState<Book[]>(loadCachedBooks);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [filters, setFilters] = useState<BookFilters>(loadStoredFilters);
 
-  // Pool management state
-  const [spinCount, setSpinCount] = useState(0);
-  const [isRefilling, setIsRefilling] = useState(false);
-  const isRefillingRef = useRef(false); // Ref to prevent race conditions
-
+  // Fetch books - uses incremental sync if cache exists
   const fetchBooks = useCallback(async () => {
     setLoading(true);
     setError(null);
+
     try {
-      const data = await getBooks({ limit: POOL_SIZE });
-      setAllBooks(data);
+      const cachedBooks = loadCachedBooks();
+      const maxAddedAt = getMaxAddedAt(cachedBooks);
+
+      // If we have cached books, only fetch new ones since maxAddedAt
+      // Otherwise, fetch all books
+      const newBooks = await getBooks(maxAddedAt > 0 ? { since: maxAddedAt } : {});
+
+      if (maxAddedAt > 0 && newBooks.length > 0) {
+        // Merge new books with cached books (dedupe by ID)
+        const existingIds = new Set(cachedBooks.map((b) => b.id));
+        const uniqueNew = newBooks.filter((b) => !existingIds.has(b.id));
+        const merged = [...cachedBooks, ...uniqueNew];
+        setAllBooks(merged);
+        saveBooksToCache(merged);
+      } else if (maxAddedAt === 0) {
+        // No cache - use fetched books as the full catalog
+        setAllBooks(newBooks);
+        saveBooksToCache(newBooks);
+      } else {
+        // Cache exists but no new books - use cached data
+        setAllBooks(cachedBooks);
+      }
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch books'));
+      // On error, still try to use cached books
+      const cachedBooks = loadCachedBooks();
+      if (cachedBooks.length > 0) {
+        setAllBooks(cachedBooks);
+      }
     } finally {
       setLoading(false);
     }
@@ -161,37 +199,6 @@ export function useBooks(): UseBooksResult {
     await fetchBooks();
   }, [fetchBooks]);
 
-  // Pool management: refill with new books (deduped, appended to end)
-  const refillPool = useCallback(async () => {
-    // Prevent concurrent fetches using ref for synchronous check
-    if (isRefillingRef.current) return;
-    isRefillingRef.current = true;
-    setIsRefilling(true);
-
-    try {
-      const newBooks = await getBooks({ limit: POOL_SIZE });
-
-      setAllBooks((prev) => {
-        // Keep existing books, append new ones (dedupe by ID)
-        const existingIds = new Set(prev.map((b) => b.id));
-        const uniqueNew = newBooks.filter((b) => !existingIds.has(b.id));
-        return [...prev, ...uniqueNew];
-      });
-
-      // Reset spin counter after refill
-      setSpinCount(0);
-    } catch (err) {
-      console.error('Failed to refill book pool:', err);
-    } finally {
-      isRefillingRef.current = false;
-      setIsRefilling(false);
-    }
-  }, []);
-
-  const incrementSpinCount = useCallback(() => {
-    setSpinCount((prev) => prev + 1);
-  }, []);
-
   return {
     books,
     allBooks,
@@ -200,9 +207,5 @@ export function useBooks(): UseBooksResult {
     filters,
     setFilters: handleSetFilters,
     refetch,
-    refillPool,
-    spinCount,
-    incrementSpinCount,
-    isRefilling,
   };
 }
