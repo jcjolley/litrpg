@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Book } from '../types/book';
 import { getBooks, type BookFilters, type CategoryFilters, EMPTY_FILTERS, getFilterValues } from '../api/books';
+import { groupBooksBySeries } from '../utils/seriesGrouping';
 
 const FILTERS_KEY = 'litrpg-filters';
 const BOOKS_CACHE_KEY = 'litrpg-books-cache';
@@ -76,7 +77,7 @@ function getBookValue(book: Book, category: keyof BookFilters): string | null {
       return book.author;
     case 'narrator':
       return book.narrator;
-    case 'length':
+    case 'length': {
       // Map length string to category
       if (!book.length) return null;
       const hours = parseFloat(book.length.split(' ')[0]) || 0;
@@ -84,10 +85,12 @@ function getBookValue(book: Book, category: keyof BookFilters): string | null {
       if (hours < 20) return 'Medium';
       if (hours < 40) return 'Long';
       return 'Epic';
-    case 'popularity':
+    }
+    case 'popularity': {
       // Map based on metrics
       const score = book.wishlistCount + book.clickThroughCount;
       return score > 10 ? 'popular' : 'niche';
+    }
     case 'source':
       return book.source;
     default:
@@ -127,8 +130,9 @@ function applyFilters(books: Book[], filters: BookFilters): Book[] {
 }
 
 interface UseBooksResult {
-  books: Book[];           // Filtered books for display
-  allBooks: Book[];        // All books (unfiltered) - the full catalog
+  books: Book[];           // Filtered books for display (series-grouped: only first book of each series)
+  allBooks: Book[];        // All books (unfiltered, not grouped) - the full catalog
+  seriesMap: Map<string, Book[]>;  // Map of series name to all books in series
   loading: boolean;
   error: Error | null;
   filters: BookFilters;
@@ -188,7 +192,13 @@ export function useBooks(): UseBooksResult {
   }, [fetchBooks]);
 
   // Apply filters client-side
-  const books = useMemo(() => applyFilters(allBooks, filters), [allBooks, filters]);
+  const filteredBooks = useMemo(() => applyFilters(allBooks, filters), [allBooks, filters]);
+
+  // Group filtered books by series - only show first book of each series
+  const { visibleBooks: books, seriesMap } = useMemo(
+    () => groupBooksBySeries(filteredBooks),
+    [filteredBooks]
+  );
 
   const handleSetFilters = useCallback((newFilters: BookFilters) => {
     setFilters(newFilters);
@@ -202,6 +212,7 @@ export function useBooks(): UseBooksResult {
   return {
     books,
     allBooks,
+    seriesMap,
     loading,
     error,
     filters,

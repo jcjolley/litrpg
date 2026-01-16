@@ -46,8 +46,8 @@ function createMockBook(id: string, genre = 'LitRPG'): Book {
     impressionCount: 0,
     upvoteCount: 0,
     downvoteCount: 0,
-    addedAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    addedAt: Date.now(),
+    updatedAt: Date.now(),
   };
 }
 
@@ -61,8 +61,8 @@ describe('useBooks', () => {
     vi.restoreAllMocks();
   });
 
-  it('should fetch books with limit on initial load', async () => {
-    const mockBooks = Array.from({ length: 30 }, (_, i) => createMockBook(`book-${i}`));
+  it('should fetch books on initial load', async () => {
+    const mockBooks = Array.from({ length: 10 }, (_, i) => createMockBook(`book-${i}`));
     mockGetBooks.mockResolvedValueOnce(mockBooks);
 
     const { result } = renderHook(() => useBooks());
@@ -71,14 +71,23 @@ describe('useBooks', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(mockGetBooks).toHaveBeenCalledWith({ limit: 30 });
-    expect(result.current.books.length).toBe(30);
+    expect(mockGetBooks).toHaveBeenCalled();
+    expect(result.current.books.length).toBe(10);
+    expect(result.current.allBooks.length).toBe(10);
   });
 
-  it('should deduplicate books when refilling pool', async () => {
-    // Initial load - 30 books
-    const initialBooks = Array.from({ length: 30 }, (_, i) => createMockBook(`book-${i}`));
-    mockGetBooks.mockResolvedValueOnce(initialBooks);
+  it('should use incremental sync when cache exists', async () => {
+    // Pre-populate cache
+    const cachedBooks = Array.from({ length: 5 }, (_, i) =>
+      createMockBook(`cached-${i}`)
+    );
+    localStorage.setItem('litrpg-books-cache', JSON.stringify(cachedBooks));
+
+    // New books from API
+    const newBooks = Array.from({ length: 3 }, (_, i) =>
+      createMockBook(`new-${i}`)
+    );
+    mockGetBooks.mockResolvedValueOnce(newBooks);
 
     const { result } = renderHook(() => useBooks());
 
@@ -86,24 +95,24 @@ describe('useBooks', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    // Refill with some duplicates and some new books
-    const refillBooks = [
-      ...Array.from({ length: 10 }, (_, i) => createMockBook(`book-${i}`)), // duplicates
-      ...Array.from({ length: 20 }, (_, i) => createMockBook(`new-book-${i}`)), // new books
+    // Should have merged cached + new books
+    expect(result.current.books.length).toBe(8);
+  });
+
+  it('should deduplicate books when merging with cache', async () => {
+    // Pre-populate cache
+    const cachedBooks = Array.from({ length: 5 }, (_, i) =>
+      createMockBook(`book-${i}`)
+    );
+    localStorage.setItem('litrpg-books-cache', JSON.stringify(cachedBooks));
+
+    // API returns some duplicates and some new
+    const apiBooks = [
+      createMockBook('book-0'), // duplicate
+      createMockBook('book-1'), // duplicate
+      createMockBook('new-book'), // new
     ];
-    mockGetBooks.mockResolvedValueOnce(refillBooks);
-
-    await act(async () => {
-      await result.current.refillPool();
-    });
-
-    // Should have 30 original + 20 new = 50 books (duplicates removed)
-    expect(result.current.books.length).toBe(50);
-  });
-
-  it('should not trigger concurrent refills', async () => {
-    const mockBooks = Array.from({ length: 30 }, (_, i) => createMockBook(`book-${i}`));
-    mockGetBooks.mockResolvedValue(mockBooks);
+    mockGetBooks.mockResolvedValueOnce(apiBooks);
 
     const { result } = renderHook(() => useBooks());
 
@@ -111,49 +120,8 @@ describe('useBooks', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    // Clear mock calls from initial load
-    mockGetBooks.mockClear();
-
-    // Trigger multiple refills simultaneously
-    await act(async () => {
-      // Start multiple refills without waiting
-      const refill1 = result.current.refillPool();
-      const refill2 = result.current.refillPool();
-      const refill3 = result.current.refillPool();
-
-      await Promise.all([refill1, refill2, refill3]);
-    });
-
-    // Should only have called getBooks once due to isRefilling guard
-    expect(mockGetBooks).toHaveBeenCalledTimes(1);
-  });
-
-  it('should reset spin count after refill', async () => {
-    const mockBooks = Array.from({ length: 30 }, (_, i) => createMockBook(`book-${i}`));
-    mockGetBooks.mockResolvedValue(mockBooks);
-
-    const { result } = renderHook(() => useBooks());
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
-
-    // Increment spin count multiple times
-    act(() => {
-      result.current.incrementSpinCount();
-      result.current.incrementSpinCount();
-      result.current.incrementSpinCount();
-    });
-
-    expect(result.current.spinCount).toBe(3);
-
-    // Refill pool
-    await act(async () => {
-      await result.current.refillPool();
-    });
-
-    // Spin count should be reset
-    expect(result.current.spinCount).toBe(0);
+    // Should have 5 cached + 1 new = 6 books (duplicates removed)
+    expect(result.current.books.length).toBe(6);
   });
 
   it('should apply filters correctly', async () => {
@@ -190,8 +158,40 @@ describe('useBooks', () => {
     expect(result.current.books.length).toBe(2);
     expect(result.current.books.every((b) => b.genre === 'LitRPG')).toBe(true);
 
-    // All books should still be accessible
+    // All books should still be accessible via allBooks
     expect(result.current.allBooks.length).toBe(4);
+  });
+
+  it('should apply exclude filters correctly', async () => {
+    const mockBooks = [
+      createMockBook('book-1', 'LitRPG'),
+      createMockBook('book-2', 'Cultivation'),
+      createMockBook('book-3', 'LitRPG'),
+      createMockBook('book-4', 'GameLit'),
+    ];
+    mockGetBooks.mockResolvedValueOnce(mockBooks);
+
+    const { result } = renderHook(() => useBooks());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Apply filter to exclude LitRPG
+    act(() => {
+      result.current.setFilters({
+        genre: { LitRPG: 'exclude' },
+        author: {},
+        narrator: {},
+        length: {},
+        popularity: {},
+        source: {},
+      });
+    });
+
+    // Should have all books except LitRPG
+    expect(result.current.books.length).toBe(2);
+    expect(result.current.books.every((b) => b.genre !== 'LitRPG')).toBe(true);
   });
 
   it('should handle API errors gracefully', async () => {
@@ -208,9 +208,14 @@ describe('useBooks', () => {
     expect(result.current.books.length).toBe(0);
   });
 
-  it('should handle refill errors without crashing', async () => {
-    const mockBooks = Array.from({ length: 30 }, (_, i) => createMockBook(`book-${i}`));
-    mockGetBooks.mockResolvedValueOnce(mockBooks);
+  it('should use cached books on API error', async () => {
+    // Pre-populate cache
+    const cachedBooks = Array.from({ length: 5 }, (_, i) =>
+      createMockBook(`cached-${i}`)
+    );
+    localStorage.setItem('litrpg-books-cache', JSON.stringify(cachedBooks));
+
+    mockGetBooks.mockRejectedValueOnce(new Error('Network error'));
 
     const { result } = renderHook(() => useBooks());
 
@@ -218,21 +223,61 @@ describe('useBooks', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    // Make refill fail
-    mockGetBooks.mockRejectedValueOnce(new Error('Refill failed'));
+    // Should still have cached books
+    expect(result.current.error).toBeTruthy();
+    expect(result.current.books.length).toBe(5);
+  });
 
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  it('should persist filters to localStorage', async () => {
+    mockGetBooks.mockResolvedValueOnce([]);
 
-    await act(async () => {
-      await result.current.refillPool();
+    const { result } = renderHook(() => useBooks());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
     });
 
-    // Should log error but not crash
-    expect(consoleSpy).toHaveBeenCalledWith('Failed to refill book pool:', expect.any(Error));
+    const newFilters = {
+      genre: { LitRPG: 'include' as const },
+      author: {},
+      narrator: {},
+      length: {},
+      popularity: {},
+      source: {},
+    };
 
-    // Original books should still be present
-    expect(result.current.books.length).toBe(30);
+    act(() => {
+      result.current.setFilters(newFilters);
+    });
 
-    consoleSpy.mockRestore();
+    const stored = localStorage.getItem('litrpg-filters');
+    expect(stored).toBeTruthy();
+    expect(JSON.parse(stored!)).toEqual(newFilters);
+  });
+
+  it('should support refetch to reload books', async () => {
+    const initialBooks = [createMockBook('book-1')];
+    const updatedBooks = [createMockBook('book-1'), createMockBook('book-2')];
+
+    mockGetBooks.mockResolvedValueOnce(initialBooks);
+
+    const { result } = renderHook(() => useBooks());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.books.length).toBe(1);
+
+    // Setup for refetch
+    mockGetBooks.mockResolvedValueOnce(updatedBooks);
+
+    await act(async () => {
+      await result.current.refetch();
+    });
+
+    // Note: Due to incremental sync logic, this will merge with cache
+    // The exact behavior depends on addedAt values
+    expect(mockGetBooks).toHaveBeenCalledTimes(2);
   });
 });

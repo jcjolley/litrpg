@@ -1,5 +1,8 @@
+import { useState, useRef, useCallback, useEffect } from 'react';
 import type { Book } from '../../types/book';
 import type { VoteType } from '../../hooks/useVotes';
+import { SeriesTooltip } from '../SeriesTooltip';
+import { seriesHasMultipleBooks } from '../../utils/seriesGrouping';
 import styles from './Carousel.module.css';
 
 interface BookCardProps {
@@ -8,8 +11,10 @@ interface BookCardProps {
   isInteractive?: boolean;  // Can click card to go to Audible
   isWishlisted?: boolean;
   userVote?: VoteType | null;  // User's current vote on this book
+  seriesMap?: Map<string, Book[]>;  // Map of series to books for tooltip
   onCardClick?: () => void;
   onVote?: (vote: VoteType) => void;
+  onSeriesBookClick?: (book: Book) => void;  // Navigate to another book in series
 }
 
 export function BookCard({
@@ -18,13 +23,71 @@ export function BookCard({
   isInteractive = false,
   isWishlisted = false,
   userVote = null,
+  seriesMap,
   onCardClick,
   onVote,
+  onSeriesBookClick,
 }: BookCardProps) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const hoverTimeoutRef = useRef<number | null>(null);
+
   const handleVoteClick = (e: React.MouseEvent, vote: VoteType) => {
     e.stopPropagation(); // Prevent card click
     onVote?.(vote);
   };
+
+  // Check if this book has multiple books in its series
+  const hasMultipleBooksInSeries = seriesMap
+    ? seriesHasMultipleBooks(seriesMap, book)
+    : false;
+
+  // Get series books for tooltip
+  const seriesBooks = hasMultipleBooksInSeries && book.series && seriesMap
+    ? seriesMap.get(book.series.toLowerCase().trim()) || []
+    : [];
+
+  // Handle hover on series name (desktop)
+  const handleSeriesMouseEnter = useCallback(() => {
+    if (!hasMultipleBooksInSeries) return;
+    hoverTimeoutRef.current = window.setTimeout(() => {
+      setShowTooltip(true);
+    }, 150);
+  }, [hasMultipleBooksInSeries]);
+
+  const handleSeriesMouseLeave = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    // Don't close immediately - let tooltip's own mouse handling take over
+  }, []);
+
+  // Handle tap on series name (mobile)
+  const handleSeriesClick = useCallback((e: React.MouseEvent) => {
+    if (!hasMultipleBooksInSeries) return;
+    e.stopPropagation(); // Prevent card click
+    setShowTooltip((prev) => !prev);
+  }, [hasMultipleBooksInSeries]);
+
+  // Handle clicking a book in the tooltip
+  const handleTooltipBookClick = useCallback((selectedBook: Book) => {
+    setShowTooltip(false);
+    onSeriesBookClick?.(selectedBook);
+  }, [onSeriesBookClick]);
+
+  // Close tooltip handler
+  const handleTooltipClose = useCallback(() => {
+    setShowTooltip(false);
+  }, []);
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Calculate score with optimistic UI update based on user's vote
   const baseScore = book.upvoteCount - book.downvoteCount;
@@ -77,10 +140,30 @@ export function BookCard({
         )}
 
         {book.series && (
-          <p className={styles.cardLargeSeries}>
-            {book.series}
-            {book.seriesPosition && ` - Book ${book.seriesPosition}`}
-          </p>
+          <div className={styles.cardLargeSeriesContainer}>
+            <p className={styles.cardLargeSeries}>
+              <span
+                className={hasMultipleBooksInSeries ? styles.seriesLink : undefined}
+                onMouseEnter={handleSeriesMouseEnter}
+                onMouseLeave={handleSeriesMouseLeave}
+                onClick={handleSeriesClick}
+                role={hasMultipleBooksInSeries ? 'button' : undefined}
+                tabIndex={hasMultipleBooksInSeries ? 0 : undefined}
+              >
+                {book.series}
+              </span>
+              {book.seriesPosition && ` - Book ${book.seriesPosition}`}
+            </p>
+            {showTooltip && hasMultipleBooksInSeries && (
+              <SeriesTooltip
+                seriesName={book.series}
+                books={seriesBooks}
+                currentBookId={book.id}
+                onBookClick={handleTooltipBookClick}
+                onClose={handleTooltipClose}
+              />
+            )}
+          </div>
         )}
 
         <div className={styles.cardLargeStats}>

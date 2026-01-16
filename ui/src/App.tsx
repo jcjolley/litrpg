@@ -32,7 +32,7 @@ export default function App() {
   const achievementEffects = useAchievementEffects(unlockedAchievements);
 
   // Data hooks
-  const { books, loading, error, filters, setFilters } = useBooks();
+  const { books, allBooks, seriesMap, loading, error, filters, setFilters } = useBooks();
   const { wishlist, addToWishlist, removeFromWishlist, count: wishlistCount } = useWishlist();
   const { notInterestedIds, addNotInterested, count: notInterestedCount } = useNotInterested();
   const { history, addToHistory, clearHistory } = useHistory();
@@ -405,6 +405,7 @@ export default function App() {
         <main className="main">
           <Carousel
             books={filteredBooks}
+            seriesMap={seriesMap}
             userWishlist={wishlist}
             userVotes={votes}
             onBookSelected={handleBookSelected}
@@ -445,7 +446,7 @@ export default function App() {
           isOpen={showWishlistPanel}
           onClose={() => setShowWishlistPanel(false)}
           wishlistIds={wishlist}
-          books={books}
+          books={allBooks}
           onRemove={removeFromWishlist}
           unlockedAchievements={unlockedAchievements}
         />
@@ -455,7 +456,7 @@ export default function App() {
           onClose={() => setShowHistoryPanel(false)}
           history={history}
           completed={completed}
-          books={books}
+          books={allBooks}
           onClear={clearHistory}
           onClearCompleted={clearCompleted}
         />
