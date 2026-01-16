@@ -9,6 +9,7 @@ export const ALL_THEMES = [
   { id: 'noir', name: 'Noir', unlockedBy: 'picky' },
   { id: 'forest-green', name: 'Forest Green', unlockedBy: 'explorer' },
   { id: 'crimson-red', name: 'Crimson Red', unlockedBy: 'speedReader' },
+  { id: 'princess-pink', name: 'Princess Pink', unlockedBy: 'lydia' },
   { id: 'rainbow-shift', name: 'Rainbow Shift', unlockedBy: 'completionist' },
 ] as const;
 

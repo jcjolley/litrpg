@@ -115,6 +115,46 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [unlock]);
 
+  // Lydia easter egg detection
+  const lydiaSequence = useRef<string[]>([]);
+  const LYDIA_CODE = ['l', 'y', 'd', 'i', 'a'];
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only track letter keys
+      if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+        lydiaSequence.current.push(e.key.toLowerCase());
+
+        // Keep only the last 5 characters
+        if (lydiaSequence.current.length > LYDIA_CODE.length) {
+          lydiaSequence.current.shift();
+        }
+
+        // Check if sequence matches "lydia"
+        if (lydiaSequence.current.length === LYDIA_CODE.length &&
+            lydiaSequence.current.every((key, i) => key === LYDIA_CODE[i])) {
+          lydiaSequence.current = [];
+
+          const achievement = unlock('lydia');
+          if (achievement) {
+            setCurrentAchievement(achievement);
+            // Pink confetti!
+            confetti({
+              particleCount: 200,
+              spread: 90,
+              origin: { y: 0.5 },
+              colors: ['#ff69b4', '#ff1493', '#ffb6c1', '#db7093', '#fff0f5'],
+              zIndex: 1000,
+            });
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [unlock]);
+
   // Show achievement notification
   const showAchievementNotification = useCallback((achievement: Achievement | null) => {
     if (achievement) {
