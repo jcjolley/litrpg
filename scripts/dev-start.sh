@@ -56,9 +56,17 @@ else
   echo "Using sample data (data/sample-books.json)..."
   DATA_FILE="$PROJECT_ROOT/data/sample-books.json"
 fi
-# Convert path for Windows compatibility
-DATA_FILE_PATH=$(cygpath -w "$DATA_FILE" 2>/dev/null || echo "$DATA_FILE")
-./gradlew :curator:run --args="import $DATA_FILE_PATH --dynamo http://localhost:4566" --quiet
+# Convert Git Bash /c/ paths to C:/ format for Gradle/Java compatibility
+DATA_FILE_WIN=$(echo "$DATA_FILE" | sed 's|^/\([a-z]\)/|\U\1:/|')
+# Disable set -e for gradlew (its internal scripts may return non-zero for valid conditions)
+set +e
+./gradlew :curator:run --args="import $DATA_FILE_WIN --dynamo http://localhost:4566"
+IMPORT_STATUS=$?
+set -e
+if [ $IMPORT_STATUS -ne 0 ]; then
+  echo "Import failed with exit code $IMPORT_STATUS"
+  exit 1
+fi
 
 # 4. Start Quarkus in background
 echo ""

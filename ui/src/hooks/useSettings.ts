@@ -5,11 +5,13 @@ const SETTINGS_KEY = 'litrpg-settings';
 export interface UserSettings {
   hideSeenBooks: boolean;      // Filter out books user has already seen
   hideCompletedBooks: boolean; // Filter out completed books
+  popularityWeight: number;    // -1 (niche) to 1 (popular), 0 = neutral/random
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
   hideSeenBooks: true,
   hideCompletedBooks: true,
+  popularityWeight: 0,
 };
 
 interface UseSettingsResult {

@@ -20,6 +20,7 @@ import { useHistory } from './hooks/useHistory';
 import { useCompleted } from './hooks/useCompleted';
 import { useVotes, type VoteType } from './hooks/useVotes';
 import { useSettings } from './hooks/useSettings';
+import { useCarouselPool } from './hooks/useCarouselPool';
 import { useAchievements, ACHIEVEMENTS, type Achievement } from './hooks/useAchievements';
 import { useAchievementEffects } from './hooks/useAchievementEffects';
 import { useAnnouncements } from './hooks/useAnnouncements';
@@ -72,10 +73,10 @@ export default function App() {
   // Get seen book IDs from history
   const seenBookIds = useMemo(() => new Set(history.map((h) => h.bookId)), [history]);
 
-  // Filter out not-interested books (always) and optionally seen/completed based on settings
-  // Wishlisted books are never filtered out by the "seen" filter
-  const filteredBooks = useMemo(() => {
-    let result = books.filter((book) => !notInterestedIds.includes(book.id));
+  // Create holding cell: filter out completed and seen books based on settings
+  // Note: not-interested filtering is handled by useCarouselPool
+  const holdingCell = useMemo(() => {
+    let result = books;
 
     if (settings.hideCompletedBooks) {
       result = result.filter((book) => !completed.some((entry) => entry.bookId === book.id));
@@ -87,7 +88,15 @@ export default function App() {
     }
 
     return result;
-  }, [books, notInterestedIds, completed, seenBookIds, wishlist, settings]);
+  }, [books, completed, seenBookIds, wishlist, settings]);
+
+  // Get carousel books (max 30) from the holding cell
+  const { carouselBooks, removeBook, refresh: refreshCarousel } = useCarouselPool({
+    holdingCell,
+    seenBookIds,
+    notInterestedIds,
+    popularityWeight: settings.popularityWeight,
+  });
 
   // Konami code detection: ↑ ↑ ↓ ↓ ← → ← → B A
   const konamiSequence = useRef<string[]>([]);
@@ -272,6 +281,9 @@ export default function App() {
 
       addNotInterested(selectedBook.id);
 
+      // Remove from carousel immediately so spin can't land on it again
+      removeBook(selectedBook.id);
+
       try {
         await recordNotInterested(selectedBook.id);
       } catch (err) {
@@ -285,7 +297,7 @@ export default function App() {
       }
     }
     setTriggerSpin(true);
-  }, [selectedBook, addToHistory, addNotInterested, notInterestedCount, unlock, showAchievementNotification]);
+  }, [selectedBook, addToHistory, addNotInterested, removeBook, notInterestedCount, unlock, showAchievementNotification]);
 
   const handleCoverClick = useCallback(async () => {
     if (!selectedBook) return;
@@ -439,6 +451,8 @@ export default function App() {
           <FilterMenu
             filters={filters}
             onFiltersChange={handleFiltersChange}
+            popularityWeight={settings.popularityWeight}
+            onPopularityWeightChange={(weight) => updateSettings({ popularityWeight: weight })}
             disabled={showOnboarding}
           />
           <AnnouncementsButton
@@ -476,7 +490,7 @@ export default function App() {
 
         <main className="main">
           <Carousel
-            books={filteredBooks}
+            books={carouselBooks}
             seriesMap={seriesMap}
             userWishlist={wishlist}
             userVotes={votes}

@@ -69,10 +69,12 @@ const SOURCES = [
 interface FilterMenuProps {
   filters: BookFilters;
   onFiltersChange: (filters: BookFilters) => void;
+  popularityWeight: number;
+  onPopularityWeightChange: (weight: number) => void;
   disabled?: boolean;
 }
 
-type FilterRow = 'source' | 'author' | 'narrator' | 'genre' | 'length' | 'popularity';
+type FilterRow = 'source' | 'author' | 'narrator' | 'genre' | 'length' | 'popularity' | 'discovery';
 
 // Cycle through filter states: neutral -> include -> exclude -> neutral
 function cycleFilterState(current: FilterState | undefined): FilterState | undefined {
@@ -101,7 +103,7 @@ function getStatePrefix(state: FilterState | undefined): string {
   }
 }
 
-export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuProps) {
+export function FilterMenu({ filters, onFiltersChange, popularityWeight, onPopularityWeightChange, disabled }: FilterMenuProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeRow, setActiveRow] = useState<FilterRow>('genre');
   const [authors, setAuthors] = useState<string[]>([]);
@@ -111,6 +113,8 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
   const [isLoadingAuthors, setIsLoadingAuthors] = useState(false);
   const [isLoadingNarrators, setIsLoadingNarrators] = useState(false);
   const initialLoadDone = useRef({ authors: false, narrators: false });
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Debounce search terms (300ms delay)
   const debouncedAuthorSearch = useDebounce(authorSearch, 300);
@@ -149,6 +153,69 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
   const toggleExpanded = useCallback(() => {
     setIsExpanded(prev => !prev);
   }, []);
+
+  // Slider handlers
+  const calculateSliderValue = useCallback((clientX: number): number => {
+    if (!sliderRef.current) return 0;
+    const rect = sliderRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const percent = Math.max(0, Math.min(1, x / rect.width));
+    // Map 0-1 to -1 to 1, snap to 0.5 increments
+    const raw = percent * 2 - 1;
+    return Math.round(raw * 2) / 2; // Snaps to -1, -0.5, 0, 0.5, 1
+  }, []);
+
+  const handleSliderMouseDown = useCallback((e: React.MouseEvent) => {
+    setIsDragging(true);
+    const value = calculateSliderValue(e.clientX);
+    onPopularityWeightChange(value);
+  }, [calculateSliderValue, onPopularityWeightChange]);
+
+  const handleSliderTouchStart = useCallback((e: React.TouchEvent) => {
+    setIsDragging(true);
+    const value = calculateSliderValue(e.touches[0].clientX);
+    onPopularityWeightChange(value);
+  }, [calculateSliderValue, onPopularityWeightChange]);
+
+  // Global mouse/touch move and up handlers for slider
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const value = calculateSliderValue(e.clientX);
+      onPopularityWeightChange(value);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const value = calculateSliderValue(e.touches[0].clientX);
+      onPopularityWeightChange(value);
+    };
+
+    const handleEnd = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('touchend', handleEnd);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleEnd);
+    };
+  }, [isDragging, calculateSliderValue, onPopularityWeightChange]);
+
+  // Get slider display text
+  const getSliderDisplayText = (): string => {
+    if (popularityWeight <= -0.75) return 'DEEP CUTS';
+    if (popularityWeight <= -0.25) return 'HIDDEN GEMS';
+    if (popularityWeight < 0.25) return 'RANDOM';
+    if (popularityWeight < 0.75) return 'CROWD FAVORITES';
+    return 'TOP PICKS';
+  };
 
   // Handle clicking on a filter option - cycle through states
   const handleOptionClick = useCallback((category: keyof BookFilters, value: string) => {
@@ -309,6 +376,13 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
                 <span className={styles.cursor}>{activeRow === 'popularity' ? '▶' : ' '}</span>
                 <span className={styles.categoryLabel}>POPULARITY</span>
               </button>
+              <button
+                className={`${styles.categoryRow} ${activeRow === 'discovery' ? styles.activeRow : ''} ${popularityWeight !== 0 ? styles.hasFilters : ''}`}
+                onClick={() => handleRowClick('discovery')}
+              >
+                <span className={styles.cursor}>{activeRow === 'discovery' ? '▶' : ' '}</span>
+                <span className={styles.categoryLabel}>DISCOVERY</span>
+              </button>
             </div>
 
             {/* Divider */}
@@ -370,6 +444,43 @@ export function FilterMenu({ filters, onFiltersChange, disabled }: FilterMenuPro
               {activeRow === 'popularity' && (
                 <div className={styles.optionsList}>
                   {POPULARITY.map(pop => renderOption('popularity', pop.value, pop.label))}
+                </div>
+              )}
+              {activeRow === 'discovery' && (
+                <div className={styles.sliderContainer}>
+                  <div className={styles.sliderLabels}>
+                    <span className={`${styles.sliderLabel} ${popularityWeight < -0.25 ? styles.active : ''}`}>
+                      NICHE
+                    </span>
+                    <span className={`${styles.sliderLabel} ${popularityWeight >= -0.25 && popularityWeight <= 0.25 ? styles.active : ''}`}>
+                      RANDOM
+                    </span>
+                    <span className={`${styles.sliderLabel} ${popularityWeight > 0.25 ? styles.active : ''}`}>
+                      POPULAR
+                    </span>
+                  </div>
+                  <div
+                    ref={sliderRef}
+                    className={styles.sliderTrack}
+                    onMouseDown={handleSliderMouseDown}
+                    onTouchStart={handleSliderTouchStart}
+                  >
+                    <div
+                      className={styles.sliderThumb}
+                      style={{ left: `${((popularityWeight + 1) / 2) * 100}%` }}
+                    />
+                  </div>
+                  <div className={styles.sliderTicks}>
+                    <div className={styles.sliderTick} />
+                    <div className={styles.sliderTick} />
+                    <div className={`${styles.sliderTick} ${styles.center}`} />
+                    <div className={styles.sliderTick} />
+                    <div className={styles.sliderTick} />
+                  </div>
+                  <div className={styles.sliderValue}>{getSliderDisplayText()}</div>
+                  <div className={styles.sliderHint}>
+                    Adjust to discover hidden gems or stick to proven favorites
+                  </div>
                 </div>
               )}
             </div>

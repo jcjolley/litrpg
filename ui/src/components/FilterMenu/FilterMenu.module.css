@@ -341,6 +341,104 @@
     0 0 12px rgba(248, 232, 0, 0.2);
 }
 
+/* Discovery Slider */
+.sliderContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+}
+
+.sliderLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--ff-text-secondary);
+  letter-spacing: 0.5px;
+}
+
+.sliderLabel {
+  transition: color 0.15s ease;
+}
+
+.sliderLabel.active {
+  color: var(--ff-text-highlight);
+  text-shadow: 0 0 8px rgba(248, 232, 0, 0.5);
+}
+
+.sliderTrack {
+  position: relative;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 3px solid var(--ff-border-inner);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.sliderFill {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #4080c0 0%, #f8e800 100%);
+  border-radius: 2px;
+  transition: width 0.15s ease;
+}
+
+.sliderThumb {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 32px;
+  background: linear-gradient(180deg, var(--ff-border-outer) 0%, #8090a0 100%);
+  border: 2px solid white;
+  border-radius: 3px;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  transition: transform 0.1s ease;
+}
+
+.sliderThumb:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.sliderThumb:active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(0.95);
+}
+
+.sliderTicks {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 8px;
+  margin-top: var(--spacing-xs);
+}
+
+.sliderTick {
+  width: 2px;
+  height: 8px;
+  background: var(--ff-border-inner);
+}
+
+.sliderTick.center {
+  background: var(--ff-text-highlight);
+  height: 12px;
+}
+
+.sliderValue {
+  text-align: center;
+  font-size: 12px;
+  color: var(--ff-text-primary);
+  margin-top: var(--spacing-sm);
+}
+
+.sliderHint {
+  text-align: center;
+  font-size: 10px;
+  color: var(--ff-text-muted);
+  margin-top: var(--spacing-xs);
+}
+
 /* Mobile Responsive */
 @media (max-width: 600px) {
   .container {
