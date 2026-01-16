@@ -18,7 +18,7 @@ import { useHistory } from './hooks/useHistory';
 import { useCompleted } from './hooks/useCompleted';
 import { useVotes, type VoteType } from './hooks/useVotes';
 import { useSettings } from './hooks/useSettings';
-import { useAchievements, type Achievement } from './hooks/useAchievements';
+import { useAchievements, ACHIEVEMENTS, type Achievement } from './hooks/useAchievements';
 import { useAchievementEffects } from './hooks/useAchievementEffects';
 import { recordImpression, recordClick, recordWishlist, recordNotInterested, recordUpvote, recordDownvote } from './api/books';
 import { getAffiliateUrl } from './config';
@@ -135,18 +135,18 @@ export default function App() {
             lydiaSequence.current.every((key, i) => key === LYDIA_CODE[i])) {
           lydiaSequence.current = [];
 
-          const achievement = unlock('lydia');
-          if (achievement) {
-            setCurrentAchievement(achievement);
-            // Pink confetti!
-            confetti({
-              particleCount: 200,
-              spread: 90,
-              origin: { y: 0.5 },
-              colors: ['#ff69b4', '#ff1493', '#ffb6c1', '#db7093', '#fff0f5'],
-              zIndex: 1000,
-            });
-          }
+          // Unlock achievement (only registers first time, but we always show confetti)
+          unlock('lydia');
+
+          // Always show the notification and confetti for Lydia
+          setCurrentAchievement(ACHIEVEMENTS.lydia);
+          confetti({
+            particleCount: 200,
+            spread: 90,
+            origin: { y: 0.5 },
+            colors: ['#ff69b4', '#ff1493', '#ffb6c1', '#db7093', '#fff0f5'],
+            zIndex: 1000,
+          });
         }
       }
     };
