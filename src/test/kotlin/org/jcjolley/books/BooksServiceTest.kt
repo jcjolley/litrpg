@@ -21,10 +21,10 @@ class BooksServiceTest {
     fun seedData() {
         // Add a few test books
         val books = listOf(
-            Book(id = "test-1", title = "Test Book 1", author = "Author A", genre = "Fantasy", 
-                 lengthCategory = "Epic", lengthMinutes = 1800, numRatings = 1000, rating = 4.5, 
+            Book(id = "svc-test-1", title = "Test Book 1", author = "Author A", genres = listOf("Fantasy"),
+                 lengthCategory = "Epic", lengthMinutes = 1800, numRatings = 1000, rating = 4.5,
                  gsiPartition = "BOOK", addedAt = System.currentTimeMillis()),
-            Book(id = "test-2", title = "Test Book 2", author = "Author B", genre = "Sci-Fi",
+            Book(id = "svc-test-2", title = "Test Book 2", author = "Author B", genres = listOf("Sci-Fi"),
                  lengthCategory = "Short", lengthMinutes = 300, numRatings = 500, rating = 4.0,
                  gsiPartition = "BOOK", addedAt = System.currentTimeMillis())
         )
@@ -40,15 +40,16 @@ class BooksServiceTest {
     }
 
     @Test
-    fun `getBooksByLength returns books`() {
-        val books = booksService.getBooksByLength("Epic", 10)
+    fun `queryBooks by length returns matching books`() {
+        val books = booksService.queryBooks(length = "Epic", limit = 10)
         println("Found ${books.size} Epic books")
         assertTrue(books.isNotEmpty(), "Should find Epic books")
+        assertTrue(books.all { it.lengthCategory == "Epic" }, "All books should have Epic length")
     }
-    
+
     @Test
-    fun `getBooksByPopularity returns books`() {
-        val books = booksService.getBooksByPopularity(true, 10)
+    fun `queryBooks by popularity returns sorted books`() {
+        val books = booksService.queryBooks(popularity = "popular", limit = 10)
         println("Found ${books.size} popular books")
         assertTrue(books.isNotEmpty(), "Should find popular books")
     }

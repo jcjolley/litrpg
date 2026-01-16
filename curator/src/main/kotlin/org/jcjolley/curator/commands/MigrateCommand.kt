@@ -67,7 +67,7 @@ class MigrateCommand(
                 // Skip if already fully migrated (has all new fields) unless --force is used
                 val isFullyMigrated = book.lengthMinutes != null &&
                     book.lengthCategory != null &&
-                    book.genre != null &&
+                    book.genres.isNotEmpty() &&
                     book.gsiPartition == "BOOK" &&
                     book.source.isNotEmpty()
 
@@ -83,17 +83,17 @@ class MigrateCommand(
                 val lengthMinutes = book.length?.let { LengthParser.parseToMinutes(it) }
                 val lengthCategory = LengthParser.computeCategory(lengthMinutes)
 
-                var genre = book.genre
+                var genres = book.genres
 
                 // Re-extract via LLM if needed and not skipping (Audible only)
-                if (!skipLlm && scraper != null && summarizer != null && genre == null && book.audibleUrl != null) {
+                if (!skipLlm && scraper != null && summarizer != null && genres.isEmpty() && book.audibleUrl != null) {
                     try {
                         echo("  Fetching from Audible...")
                         val scraped = scraper.scrapeBook(book.audibleUrl!!)
                         echo("  Extracting facts via LLM...")
                         val result = summarizer.summarize(scraped.originalDescription)
-                        genre = result.facts.genre
-                        echo("  ${green("✓")} Extracted: genre=$genre")
+                        genres = result.facts.genres
+                        echo("  ${green("✓")} Extracted: genres=$genres")
                     } catch (e: Exception) {
                         echo("  ${yellow("⚠")} LLM extraction failed: ${e.message}")
                     }
@@ -102,7 +102,7 @@ class MigrateCommand(
                 val updatedBook = book.copy(
                     lengthMinutes = lengthMinutes,
                     lengthCategory = lengthCategory,
-                    genre = genre,
+                    genres = genres,
                     gsiPartition = "BOOK",
                     updatedAt = Instant.now()
                 )
@@ -110,14 +110,14 @@ class MigrateCommand(
                 if (!dryRun) {
                     try {
                         repository.save(updatedBook)
-                        echo("  ${green("✓")} Updated: $lengthCategory ($lengthMinutes min), genre=$genre")
+                        echo("  ${green("✓")} Updated: $lengthCategory ($lengthMinutes min), genres=$genres")
                         updated++
                     } catch (e: Exception) {
                         echo("  ${red("✗")} Failed to save: ${e.message}")
                         failed++
                     }
                 } else {
-                    echo("  ${blue("[DRY RUN]")} Would update: $lengthCategory ($lengthMinutes min), genre=$genre")
+                    echo("  ${blue("[DRY RUN]")} Would update: $lengthCategory ($lengthMinutes min), genres=$genres")
                     updated++
                 }
                 echo("")

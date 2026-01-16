@@ -11,7 +11,7 @@ interface SeriesTooltipProps {
   currentBookId: string;
   /** Called when user clicks on a book in the list */
   onBookClick: (book: Book) => void;
-  /** Called when tooltip should close (click outside, escape key) */
+  /** Called when modal should close (click outside, escape key) */
   onClose: () => void;
 }
 
@@ -22,7 +22,7 @@ export function SeriesTooltip({
   onBookClick,
   onClose,
 }: SeriesTooltipProps) {
-  const tooltipRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Close on escape key
   useEffect(() => {
@@ -36,24 +36,12 @@ export function SeriesTooltip({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Close on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (tooltipRef.current && !tooltipRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-
-    // Use setTimeout to avoid immediately closing from the triggering click
-    const timer = setTimeout(() => {
-      document.addEventListener('click', handleClickOutside);
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, [onClose]);
+  // Close on click outside the modal content
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
 
   const handleBookClick = (e: React.MouseEvent, book: Book) => {
     e.stopPropagation();
@@ -61,32 +49,42 @@ export function SeriesTooltip({
   };
 
   return (
-    <div ref={tooltipRef} className={styles.tooltip} role="menu">
-      <div className={styles.arrow} />
-      <div className={styles.header}>{seriesName}</div>
-      <ul className={styles.bookList}>
-        {books.map((book) => {
-          const isCurrent = book.id === currentBookId;
-          const positionLabel = book.seriesPosition
-            ? `Book ${book.seriesPosition}`
-            : 'Book';
+    <div className={styles.overlay} onClick={handleOverlayClick} role="dialog" aria-modal="true" data-interactive>
+      <div ref={modalRef} className={styles.modal} role="menu" data-interactive>
+        <button
+          className={styles.closeButton}
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          aria-label="Close"
+          data-interactive
+        >
+          ×
+        </button>
+        <div className={styles.header}>{seriesName}</div>
+        <ul className={styles.bookList}>
+          {books.map((book) => {
+            const isCurrent = book.id === currentBookId;
+            const positionLabel = book.seriesPosition
+              ? `Book ${book.seriesPosition}`
+              : 'Book';
 
-          return (
-            <li key={book.id}>
-              <button
-                className={`${styles.bookItem} ${isCurrent ? styles.bookItemCurrent : ''}`}
-                onClick={(e) => handleBookClick(e, book)}
-                type="button"
-                role="menuitem"
-              >
-                <span className={styles.bookPosition}>{positionLabel}:</span>
-                <span className={styles.bookTitle}>{book.title}</span>
-                {isCurrent && <span className={styles.currentIndicator}>&#10003;</span>}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+            return (
+              <li key={book.id}>
+                <button
+                  className={`${styles.bookItem} ${isCurrent ? styles.bookItemCurrent : ''}`}
+                  onClick={(e) => handleBookClick(e, book)}
+                  type="button"
+                  role="menuitem"
+                >
+                  <span className={styles.bookPosition}>{positionLabel}:</span>
+                  <span className={styles.bookTitle}>{book.title}</span>
+                  {isCurrent && <span className={styles.currentIndicator}>★</span>}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        <div className={styles.hint}>Click a book to view it in the carousel</div>
+      </div>
     </div>
   );
 }

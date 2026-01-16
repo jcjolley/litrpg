@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, type TouchEvent } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo, type TouchEvent } from 'react';
 import type { Book } from '../../types/book';
 import type { VoteType } from '../../hooks/useVotes';
 import { CarouselTrack } from './CarouselTrack';
@@ -52,7 +52,7 @@ interface CarouselProps {
 }
 
 export function Carousel({
-  books,
+  books: booksProp,
   seriesMap,
   userWishlist,
   userVotes,
@@ -72,7 +72,22 @@ export function Carousel({
   hasGoldenBorder = false,
 }: CarouselProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [injectedBooks, setInjectedBooks] = useState<{ index: number; book: Book }[]>([]);
   const { selectBook, getTargetIndex } = useWeightedSelection();
+
+  // Create books array with any swapped books applied
+  const books = useMemo(() => {
+    // injectedBooks is a map of index -> replacement book
+    if (injectedBooks.length === 0) return booksProp;
+
+    const result = [...booksProp];
+    for (const { index, book } of injectedBooks) {
+      if (index >= 0 && index < result.length) {
+        result[index] = book;
+      }
+    }
+    return result;
+  }, [booksProp, injectedBooks]);
   const viewportRef = useRef<HTMLDivElement>(null);
   const containerSize = useContainerSize(viewportRef);
 
@@ -172,41 +187,26 @@ export function Carousel({
     [spinState, selectedIndex, books.length, nudgeMultiple]
   );
 
-  // Handle clicking a book from the series tooltip - navigate to that book
+  // Handle clicking a book from the series modal - swap current book for the selected one
   const handleSeriesBookClick = useCallback(
     (targetBook: Book) => {
       if (spinState === 'spinning' || spinState === 'continuous' || spinState === 'nudging') return;
+      if (selectedIndex === null) return;
 
-      // Find the book in the books array
-      const targetIndex = books.findIndex((b) => b.id === targetBook.id);
-      if (targetIndex === -1) {
-        console.warn(`Series book ${targetBook.id} not found in carousel books`);
-        return;
-      }
+      // If clicking the current book, do nothing
+      if (books[selectedIndex]?.id === targetBook.id) return;
 
-      if (selectedIndex === null) {
-        // No current selection - just select this book directly
-        setSelectedIndex(targetIndex);
-        onBookSelected(targetBook);
-        return;
-      }
+      // Swap the book at the current position
+      setInjectedBooks(prev => {
+        // Remove any existing swap at this index, then add the new one
+        const filtered = prev.filter(item => item.index !== selectedIndex);
+        return [...filtered, { index: selectedIndex, book: targetBook }];
+      });
 
-      // Calculate shortest path (accounting for wrap-around)
-      let diff = targetIndex - selectedIndex;
-      const halfLength = books.length / 2;
-
-      // Take the shorter path around the wheel
-      if (diff > halfLength) diff -= books.length;
-      else if (diff < -halfLength) diff += books.length;
-
-      if (diff === 0) return; // Already at this book
-
-      const direction = diff > 0 ? 'left' : 'right';
-      const steps = Math.abs(diff);
-
-      nudgeMultiple(direction, steps);
+      // Update the selected book
+      onBookSelected(targetBook);
     },
-    [spinState, books, selectedIndex, nudgeMultiple, onBookSelected]
+    [spinState, books, selectedIndex, onBookSelected]
   );
 
   // Keyboard navigation - arrow keys to nudge left/right
@@ -278,6 +278,27 @@ export function Carousel({
       doSpin();
     }
   }, [triggerSpin]);
+
+  // When the base books list changes (e.g., due to filter), clear any series swaps
+  // since they may no longer be valid
+  useEffect(() => {
+    setInjectedBooks([]);
+  }, [booksProp]);
+
+  // When books change (e.g., due to filter), check if current selection is still valid
+  // If the selected book is no longer in the list, spin to a new book
+  useEffect(() => {
+    // Only act if we're stopped with a valid selection
+    if (spinState !== 'stopped' || selectedBookId === null || selectedBookId === undefined) return;
+
+    // Check if the currently selected book is still in the books array
+    const bookStillExists = booksProp.some(book => book.id === selectedBookId);
+
+    if (!bookStillExists && booksProp.length > 0) {
+      // Selected book was removed (probably by a filter), spin to a new one
+      doSpin();
+    }
+  }, [booksProp, selectedBookId, spinState, doSpin]);
 
   const isInWishlist = selectedBookId ? userWishlist.includes(selectedBookId) : false;
   const showActions = spinState === 'stopped' && selectedIndex !== null;

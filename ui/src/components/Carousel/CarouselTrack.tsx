@@ -122,7 +122,13 @@ export function CarouselTrack({
         // Can click to select this card if visible, not spinning, and not already at center
         const canClick = opacity > 0 && !spinning && !isAtCenter;
 
-        const handleCardClick = () => {
+        const handleCardClick = (e: React.MouseEvent) => {
+          // Don't trigger card navigation if clicking on interactive elements inside the card
+          // Check if the click target or any parent has data-interactive attribute
+          const target = e.target as HTMLElement;
+          if (target.closest('[data-interactive]')) {
+            return;
+          }
           if (canClick && onCardClick) {
             onCardClick(index);
           }

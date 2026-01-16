@@ -1,77 +1,93 @@
-/* SeriesTooltip - FF Style Tooltip */
+/* SeriesTooltip - FF Style Modal */
 
-.tooltip {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 1000;
-  min-width: 200px;
-  max-width: 320px;
+  animation: overlayFadeIn 0.15s ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal {
+  position: relative;
+  min-width: 320px;
+  max-width: 500px;
+  width: 90%;
   background: linear-gradient(180deg, var(--ff-blue-mid) 0%, var(--ff-blue-dark) 100%);
   border: 3px solid var(--ff-border-outer);
   border-radius: 4px;
   box-shadow:
     inset 0 0 0 2px var(--ff-border-inner),
     inset 0 0 0 4px var(--ff-border-shadow),
-    0 8px 24px rgba(0, 0, 0, 0.8);
-  animation: tooltipFadeIn 0.15s ease-out;
+    0 8px 32px rgba(0, 0, 0, 0.9);
+  animation: modalSlideIn 0.2s ease-out;
   font-family: 'Press Start 2P', cursive;
 }
 
-@keyframes tooltipFadeIn {
+@keyframes modalSlideIn {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(-4px);
+    transform: scale(0.95) translateY(-10px);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: scale(1) translateY(0);
   }
 }
 
-/* Arrow pointing up */
-.arrow {
+.closeButton {
   position: absolute;
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-bottom: 8px solid var(--ff-border-outer);
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 2px solid var(--ff-border-inner);
+  border-radius: 4px;
+  color: var(--ff-text-secondary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.arrow::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: -6px;
-  width: 0;
-  height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-bottom: 6px solid var(--ff-blue-mid);
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ff-text-primary);
+  border-color: var(--ff-border-outer);
 }
 
 .header {
-  padding: 8px 12px;
-  font-size: 10px;
+  padding: 16px 48px 12px 16px;
+  font-size: 12px;
   color: var(--ff-text-highlight);
   border-bottom: 2px solid var(--ff-border-inner);
-  text-align: center;
   letter-spacing: 0.5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .bookList {
   list-style: none;
   margin: 0;
-  padding: 4px;
-  max-height: 240px;
+  padding: 8px;
+  max-height: 300px;
   overflow-y: auto;
 }
 
@@ -97,14 +113,14 @@
 .bookItem {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 12px;
   width: 100%;
-  padding: 8px 10px;
+  padding: 12px 14px;
   background: transparent;
   border: none;
-  border-radius: 2px;
+  border-radius: 4px;
   font-family: inherit;
-  font-size: 9px;
+  font-size: 10px;
   color: var(--ff-text-secondary);
   text-align: left;
   cursor: pointer;
@@ -134,7 +150,8 @@
 .bookPosition {
   flex-shrink: 0;
   color: var(--ff-text-muted);
-  font-size: 8px;
+  font-size: 9px;
+  min-width: 60px;
 }
 
 .bookItemCurrent .bookPosition {
@@ -144,39 +161,53 @@
 
 .bookTitle {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-wrap: break-word;
+  line-height: 1.4;
 }
 
 .currentIndicator {
   flex-shrink: 0;
   color: var(--ff-text-highlight);
-  font-size: 10px;
+  font-size: 12px;
+}
+
+.hint {
+  padding: 10px 16px 14px;
+  font-size: 8px;
+  color: var(--ff-text-muted);
+  text-align: center;
+  border-top: 2px solid var(--ff-border-inner);
 }
 
 /* Mobile adjustments */
 @media (max-width: 600px) {
-  .tooltip {
-    min-width: 180px;
-    max-width: 280px;
+  .modal {
+    min-width: 280px;
+    max-width: 95%;
   }
 
   .header {
-    font-size: 9px;
-    padding: 6px 10px;
+    font-size: 10px;
+    padding: 12px 40px 10px 12px;
   }
 
   .bookItem {
-    font-size: 8px;
-    padding: 6px 8px;
+    font-size: 9px;
+    padding: 10px 12px;
+    gap: 8px;
   }
 
   .bookPosition {
-    font-size: 7px;
+    font-size: 8px;
+    min-width: 50px;
   }
 
   .bookList {
-    max-height: 200px;
+    max-height: 250px;
+  }
+
+  .hint {
+    font-size: 7px;
+    padding: 8px 12px 12px;
   }
 }

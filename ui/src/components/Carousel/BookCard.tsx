@@ -66,7 +66,15 @@ export function BookCard({
   const handleSeriesClick = useCallback((e: React.MouseEvent) => {
     if (!hasMultipleBooksInSeries) return;
     e.stopPropagation(); // Prevent card click
+    e.preventDefault(); // Prevent any default behavior
     setShowTooltip((prev) => !prev);
+  }, [hasMultipleBooksInSeries]);
+
+  // Handle pointer down to mark that we're interacting with the series link
+  // This prevents the parent wrapper's click from firing on mobile
+  const handleSeriesPointerDown = useCallback((e: React.PointerEvent) => {
+    if (!hasMultipleBooksInSeries) return;
+    e.stopPropagation(); // Stop the event from reaching the wrapper
   }, [hasMultipleBooksInSeries]);
 
   // Handle clicking a book in the tooltip
@@ -147,8 +155,10 @@ export function BookCard({
                 onMouseEnter={handleSeriesMouseEnter}
                 onMouseLeave={handleSeriesMouseLeave}
                 onClick={handleSeriesClick}
+                onPointerDown={handleSeriesPointerDown}
                 role={hasMultipleBooksInSeries ? 'button' : undefined}
                 tabIndex={hasMultipleBooksInSeries ? 0 : undefined}
+                data-interactive={hasMultipleBooksInSeries ? true : undefined}
               >
                 {book.series}
               </span>
@@ -204,10 +214,20 @@ export function BookCard({
 
   const isClickable = isInteractive && onCardClick;
 
+  // Handle card click - but not if clicking on interactive elements inside
+  const handleCardClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    // Don't trigger card click if clicking on interactive elements (like series link)
+    if (target.closest('[data-interactive]')) {
+      return;
+    }
+    onCardClick?.();
+  }, [onCardClick]);
+
   return (
     <div
       className={`${styles.cardLarge} ${isSelected ? styles.cardLargeSelected : ''} ${isClickable ? styles.cardLargeClickable : ''}`}
-      onClick={isClickable ? onCardClick : undefined}
+      onClick={isClickable ? handleCardClick : undefined}
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : undefined}
     >

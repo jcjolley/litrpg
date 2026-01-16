@@ -16,7 +16,7 @@ vi.mock('../../src/api/books', async (importOriginal) => {
 const mockGetBooks = vi.mocked(booksApi.getBooks);
 
 // Generate mock books with all required fields
-function createMockBook(id: string, genre = 'LitRPG'): Book {
+function createMockBook(id: string, genres: string[] = ['LitRPG']): Book {
   return {
     id,
     title: `Book ${id}`,
@@ -26,7 +26,7 @@ function createMockBook(id: string, genre = 'LitRPG'): Book {
     narrator: 'Test Narrator',
     series: null,
     seriesPosition: null,
-    genre,
+    genres,
     length: '10 hrs',
     releaseDate: null,
     language: 'English',
@@ -126,10 +126,10 @@ describe('useBooks', () => {
 
   it('should apply filters correctly', async () => {
     const mockBooks = [
-      createMockBook('book-1', 'LitRPG'),
-      createMockBook('book-2', 'Cultivation'),
-      createMockBook('book-3', 'LitRPG'),
-      createMockBook('book-4', 'GameLit'),
+      createMockBook('book-1', ['LitRPG']),
+      createMockBook('book-2', ['Cultivation']),
+      createMockBook('book-3', ['LitRPG']),
+      createMockBook('book-4', ['GameLit']),
     ];
     mockGetBooks.mockResolvedValueOnce(mockBooks);
 
@@ -156,7 +156,7 @@ describe('useBooks', () => {
 
     // Should only have LitRPG books
     expect(result.current.books.length).toBe(2);
-    expect(result.current.books.every((b) => b.genre === 'LitRPG')).toBe(true);
+    expect(result.current.books.every((b) => b.genres.includes('LitRPG'))).toBe(true);
 
     // All books should still be accessible via allBooks
     expect(result.current.allBooks.length).toBe(4);
@@ -164,10 +164,10 @@ describe('useBooks', () => {
 
   it('should apply exclude filters correctly', async () => {
     const mockBooks = [
-      createMockBook('book-1', 'LitRPG'),
-      createMockBook('book-2', 'Cultivation'),
-      createMockBook('book-3', 'LitRPG'),
-      createMockBook('book-4', 'GameLit'),
+      createMockBook('book-1', ['LitRPG']),
+      createMockBook('book-2', ['Cultivation']),
+      createMockBook('book-3', ['LitRPG']),
+      createMockBook('book-4', ['GameLit']),
     ];
     mockGetBooks.mockResolvedValueOnce(mockBooks);
 
@@ -191,7 +191,7 @@ describe('useBooks', () => {
 
     // Should have all books except LitRPG
     expect(result.current.books.length).toBe(2);
-    expect(result.current.books.every((b) => b.genre !== 'LitRPG')).toBe(true);
+    expect(result.current.books.every((b) => !b.genres.includes('LitRPG'))).toBe(true);
   });
 
   it('should handle API errors gracefully', async () => {

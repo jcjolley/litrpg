@@ -151,11 +151,11 @@ class MigrateCommandTest {
             command.parse(listOf("--dynamo", dynamoEndpoint, "--skip-llm"))
         }
 
-        // Then: length fields updated but genre stays null
+        // Then: length fields updated but genres stays empty
         val migrated = repository.findById(oldBook.id)!!
         expectThat(migrated.lengthMinutes).isEqualTo(330) // 5*60 + 30
         expectThat(migrated.lengthCategory).isEqualTo("Short") // < 360 mins
-        expectThat(migrated.genre).isNull()
+        expectThat(migrated.genres).isEmpty()
     }
 
     @Test
@@ -256,7 +256,7 @@ class MigrateCommandTest {
                 incitingIncident = "Awakening",
                 goal = "Power",
                 tone = "epic",
-                genre = "Cultivation"
+                genres = listOf("Cultivation")
             ),
             blurb = "Test blurb. Cultivation.",
             wordCount = 35
@@ -272,9 +272,9 @@ class MigrateCommandTest {
             command.parse(listOf("--dynamo", dynamoEndpoint))
         }
 
-        // Then: genre should be extracted
+        // Then: genres should be extracted
         val migrated = repository.findById(oldBook.id)!!
-        expectThat(migrated.genre).isEqualTo("Cultivation")
+        expectThat(migrated.genres).containsExactly("Cultivation")
         expectThat(migrated.lengthMinutes).isEqualTo(600)
         expectThat(migrated.lengthCategory).isEqualTo("Medium")
     }
@@ -294,8 +294,8 @@ class MigrateCommandTest {
             rating = 4.5,
             numRatings = 100,
             description = "A test book description.",
-            // Explicitly set new fields to null to simulate old format
-            genre = null,
+            // Explicitly set new fields to empty/null to simulate old format
+            genres = emptyList(),
             lengthMinutes = null,
             lengthCategory = null,
             gsiPartition = "BOOK" // Default, but won't be in old DDB records
@@ -315,7 +315,7 @@ class MigrateCommandTest {
             rating = 4.5,
             numRatings = 100,
             description = "A test book description.",
-            genre = "System Apocalypse",
+            genres = listOf("System Apocalypse"),
             lengthMinutes = 750,
             lengthCategory = "Long",
             gsiPartition = "BOOK"

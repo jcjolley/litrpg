@@ -150,8 +150,19 @@ class StatsCommand : CliktCommand(name = "stats") {
     }
 
     private fun printGenreBreakdown(books: List<Book>) {
-        val genreGroups = books.groupBy { it.genre ?: "Uncategorized" }
-        if (genreGroups.size <= 1 && genreGroups.containsKey("Uncategorized")) {
+        // Flatten genres: each book can have multiple genres
+        val genreStats = mutableMapOf<String, MutableList<Book>>()
+        for (book in books) {
+            if (book.genres.isEmpty()) {
+                genreStats.getOrPut("Uncategorized") { mutableListOf() }.add(book)
+            } else {
+                for (genre in book.genres) {
+                    genreStats.getOrPut(genre) { mutableListOf() }.add(book)
+                }
+            }
+        }
+
+        if (genreStats.size <= 1 && genreStats.containsKey("Uncategorized")) {
             return // No genre data
         }
 
@@ -160,7 +171,7 @@ class StatsCommand : CliktCommand(name = "stats") {
         echo("=".repeat(60))
         echo("")
 
-        genreGroups.entries
+        genreStats.entries
             .sortedByDescending { it.value.sumOf { b -> b.impressionCount } }
             .forEach { (genre, genreBooks) ->
                 val impressions = genreBooks.sumOf { it.impressionCount }

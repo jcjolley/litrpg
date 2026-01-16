@@ -25,34 +25,34 @@ class BooksQueryTest {
     fun seedTestData() {
         val testBooks = listOf(
             Book(id = "test-1", title = "Defiance of the Fall", author = "TheFirstDefier",
-                 genre = "System Apocalypse", lengthCategory = "Epic", lengthMinutes = 1800,
+                 genres = listOf("System Apocalypse"), lengthCategory = "Epic", lengthMinutes = 1800,
                  numRatings = 60000, rating = 4.7, gsiPartition = "BOOK"),
             Book(id = "test-2", title = "Primal Hunter", author = "Zogarth",
-                 genre = "System Apocalypse", lengthCategory = "Epic", lengthMinutes = 1800,
+                 genres = listOf("System Apocalypse"), lengthCategory = "Epic", lengthMinutes = 1800,
                  numRatings = 55000, rating = 4.6, gsiPartition = "BOOK"),
             Book(id = "test-3", title = "Cradle: Unsouled", author = "Will Wight",
-                 genre = "Cultivation", lengthCategory = "Medium", lengthMinutes = 600,
+                 genres = listOf("Cultivation"), lengthCategory = "Medium", lengthMinutes = 600,
                  numRatings = 45000, rating = 4.8, gsiPartition = "BOOK"),
             Book(id = "test-4", title = "Cradle: Soulsmith", author = "Will Wight",
-                 genre = "Cultivation", lengthCategory = "Medium", lengthMinutes = 600,
+                 genres = listOf("Cultivation"), lengthCategory = "Medium", lengthMinutes = 600,
                  numRatings = 42000, rating = 4.7, gsiPartition = "BOOK"),
             Book(id = "test-5", title = "Dungeon Crawler Carl", author = "Matt Dinniman",
-                 genre = "Dungeon Core", lengthCategory = "Long", lengthMinutes = 900,
+                 genres = listOf("Dungeon Core"), lengthCategory = "Long", lengthMinutes = 900,
                  numRatings = 50000, rating = 4.9, gsiPartition = "BOOK"),
             Book(id = "test-6", title = "He Who Fights With Monsters", author = "Shirtaloon",
-                 genre = "Isekai", lengthCategory = "Epic", lengthMinutes = 1800,
+                 genres = listOf("Isekai"), lengthCategory = "Epic", lengthMinutes = 1800,
                  numRatings = 35000, rating = 4.5, gsiPartition = "BOOK"),
             Book(id = "test-7", title = "The Perfect Run", author = "Maxime J. Durand",
-                 genre = "Time Loop", lengthCategory = "Long", lengthMinutes = 900,
+                 genres = listOf("Time Loop"), lengthCategory = "Long", lengthMinutes = 900,
                  numRatings = 8000, rating = 4.6, gsiPartition = "BOOK"),
             Book(id = "test-8", title = "Mother of Learning", author = "nobody103",
-                 genre = "Time Loop", lengthCategory = "Epic", lengthMinutes = 1800,
+                 genres = listOf("Time Loop"), lengthCategory = "Epic", lengthMinutes = 1800,
                  numRatings = 25000, rating = 4.7, gsiPartition = "BOOK"),
             Book(id = "test-9", title = "Beware of Chicken", author = "CasualFarmer",
-                 genre = "Cultivation", lengthCategory = "Long", lengthMinutes = 900,
+                 genres = listOf("Cultivation"), lengthCategory = "Long", lengthMinutes = 900,
                  numRatings = 30000, rating = 4.8, gsiPartition = "BOOK"),
             Book(id = "test-10", title = "Legend of the Arch Magus", author = "Michael Sisa",
-                 genre = "Academy", lengthCategory = "Short", lengthMinutes = 300,
+                 genres = listOf("Academy"), lengthCategory = "Short", lengthMinutes = 300,
                  numRatings = 500, rating = 3.9, gsiPartition = "BOOK")
         )
         testBooks.forEach { booksService.saveBook(it) }
@@ -64,12 +64,12 @@ class BooksQueryTest {
     fun `query by genre returns matching books`() {
         given()
             .`when`()
-            .get("/books?genre=Cultivation")
+            .get("/books?genres=Cultivation")
             .then()
             .statusCode(200)
             .body("size()", greaterThan(0))
-            .body("findAll { it.genre == 'Cultivation' }.size()", greaterThan(0))
-            .body("findAll { it.genre != 'Cultivation' }.size()", equalTo(0))
+            .body("findAll { it.genres.contains('Cultivation') }.size()", greaterThan(0))
+            .body("findAll { !it.genres.contains('Cultivation') }.size()", equalTo(0))
     }
 
     @Test
@@ -126,11 +126,11 @@ class BooksQueryTest {
     fun `combined query genre and popularity filters correctly`() {
         given()
             .`when`()
-            .get("/books?genre=Cultivation&popularity=popular")
+            .get("/books?genres=Cultivation&popularity=popular")
             .then()
             .statusCode(200)
             .body("size()", greaterThanOrEqualTo(0))
-            .body("findAll { it.genre != 'Cultivation' }.size()", equalTo(0))
+            .body("findAll { !it.genres.contains('Cultivation') }.size()", equalTo(0))
     }
 
     @Test
@@ -209,7 +209,7 @@ class BooksQueryTest {
             id = "test-old-book-$suffix",
             title = "Test Old Book",
             author = "Test Author",
-            genre = "Test Genre",
+            genres = listOf("Test Genre"),
             lengthCategory = "Short",
             lengthMinutes = 300,
             numRatings = 100,
@@ -221,7 +221,7 @@ class BooksQueryTest {
             id = "test-new-book-$suffix",
             title = "Test New Book",
             author = "Test Author",
-            genre = "Test Genre",
+            genres = listOf("Test Genre"),
             lengthCategory = "Short",
             lengthMinutes = 300,
             numRatings = 200,
@@ -255,7 +255,7 @@ class BooksQueryTest {
             id = testBookId,
             title = "Test Recent Book",
             author = "Test Author",
-            genre = "Test Genre",
+            genres = listOf("Test Genre"),
             lengthCategory = "Medium",
             lengthMinutes = 600,
             numRatings = 5000,
@@ -270,10 +270,10 @@ class BooksQueryTest {
 
         given()
             .`when`()
-            .get("/books?since=$pastTimestamp&genre=Cultivation")
+            .get("/books?since=$pastTimestamp&genres=Cultivation")
             .then()
             .statusCode(200)
-            // Should include the test book even though genre=Cultivation is specified
+            // Should include the test book even though genres=Cultivation is specified
             .body("find { it.id == '$testBookId' }", notNullValue())
     }
 }

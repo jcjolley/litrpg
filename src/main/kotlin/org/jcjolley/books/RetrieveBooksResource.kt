@@ -20,7 +20,7 @@ class RetrieveBooksResource(val booksService: BooksService) {
         @QueryParam("popularity") popularity: String?,  // "popular" or "niche"
         @QueryParam("length") length: String?,          // "Short", "Medium", "Long", "Epic"
         @QueryParam("source") source: String?,          // "AUDIBLE" or "ROYAL_ROAD"
-        @QueryParam("limit") @DefaultValue("50") limit: Int,
+        @QueryParam("limit") limit: Int?,
         @QueryParam("since") since: Long?              // Timestamp in millis - returns only books added after this time
     ): List<Book> {
         // If since is provided, use incremental fetch (ignores other filters)
@@ -41,7 +41,7 @@ class RetrieveBooksResource(val booksService: BooksService) {
             popularity = popularity,
             length = length,
             source = source,
-            limit = limit
+            limit = limit ?: Int.MAX_VALUE
         )
     }
 

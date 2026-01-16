@@ -8,7 +8,8 @@ TABLE_NAME="litrpg-books-dev"
 ANNOUNCEMENTS_TABLE_NAME="litrpg-books-dev-announcements"
 REGION="us-east-1"
 
-echo "Setting up DynamoDB table with GSIs: $TABLE_NAME"
+echo "Setting up DynamoDB table: $TABLE_NAME"
+echo "GSIs: audibleUrl-index, royalRoadUrl-index, addedAt-index"
 
 # Delete existing table if it exists (to ensure GSIs are created properly)
 aws dynamodb delete-table \
@@ -20,25 +21,29 @@ aws dynamodb delete-table \
 # Wait for deletion to complete
 sleep 2
 
-echo "Creating table with addedAt-index GSI..."
+echo "Creating table with GSIs (audibleUrl-index, royalRoadUrl-index, addedAt-index)..."
 
-# Create the table with only addedAt-index GSI (other filtering done in-memory)
+# Create the table with all GSIs to match production
 aws dynamodb create-table \
     --endpoint-url $ENDPOINT \
     --table-name $TABLE_NAME \
     --attribute-definitions \
       AttributeName=id,AttributeType=S \
+      AttributeName=audibleUrl,AttributeType=S \
+      AttributeName=royalRoadUrl,AttributeType=S \
       AttributeName=gsiPartition,AttributeType=S \
       AttributeName=addedAt,AttributeType=N \
     --key-schema AttributeName=id,KeyType=HASH \
     --global-secondary-indexes \
       '[
+        {"IndexName": "audibleUrl-index", "KeySchema": [{"AttributeName": "audibleUrl", "KeyType": "HASH"}], "Projection": {"ProjectionType": "ALL"}},
+        {"IndexName": "royalRoadUrl-index", "KeySchema": [{"AttributeName": "royalRoadUrl", "KeyType": "HASH"}], "Projection": {"ProjectionType": "ALL"}},
         {"IndexName": "addedAt-index", "KeySchema": [{"AttributeName": "gsiPartition", "KeyType": "HASH"}, {"AttributeName": "addedAt", "KeyType": "RANGE"}], "Projection": {"ProjectionType": "ALL"}}
       ]' \
     --billing-mode PAY_PER_REQUEST \
     --region $REGION
 
-echo "Table with addedAt-index GSI created successfully"
+echo "Table with all GSIs created successfully"
 
 # Import data if books.json exists (skip curator import since it creates table without GSIs)
 if [ -f "data/books-prod.json" ]; then

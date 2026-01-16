@@ -17,7 +17,7 @@ function createBook(overrides: Partial<Book>): Book {
     narrator: null,
     series: overrides.series ?? null,
     seriesPosition: overrides.seriesPosition ?? null,
-    genre: null,
+    genres: [],
     length: null,
     releaseDate: null,
     language: 'English',
