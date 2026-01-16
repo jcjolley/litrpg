@@ -20,7 +20,7 @@ import { useHistory } from './hooks/useHistory';
 import { useCompleted } from './hooks/useCompleted';
 import { useVotes, type VoteType } from './hooks/useVotes';
 import { useSettings } from './hooks/useSettings';
-import { useAchievements, type Achievement } from './hooks/useAchievements';
+import { useAchievements, ACHIEVEMENTS, type Achievement } from './hooks/useAchievements';
 import { useAchievementEffects } from './hooks/useAchievementEffects';
 import { useAnnouncements } from './hooks/useAnnouncements';
 import { recordImpression, recordClick, recordWishlist, recordNotInterested, recordUpvote, recordDownvote } from './api/books';
@@ -35,7 +35,7 @@ export default function App() {
   const achievementEffects = useAchievementEffects(unlockedAchievements);
 
   // Data hooks
-  const { books, loading, error, filters, setFilters } = useBooks();
+  const { books, allBooks, seriesMap, loading, error, filters, setFilters } = useBooks();
   const { wishlist, addToWishlist, removeFromWishlist, count: wishlistCount } = useWishlist();
   const { notInterestedIds, addNotInterested, count: notInterestedCount } = useNotInterested();
   const { history, addToHistory, clearHistory } = useHistory();
@@ -118,6 +118,46 @@ export default function App() {
             spread: 90,
             origin: { y: 0.5 },
             colors: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'],
+            zIndex: 1000,
+          });
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [unlock]);
+
+  // Lydia easter egg detection
+  const lydiaSequence = useRef<string[]>([]);
+  const LYDIA_CODE = ['l', 'y', 'd', 'i', 'a'];
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only track letter keys
+      if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+        lydiaSequence.current.push(e.key.toLowerCase());
+
+        // Keep only the last 5 characters
+        if (lydiaSequence.current.length > LYDIA_CODE.length) {
+          lydiaSequence.current.shift();
+        }
+
+        // Check if sequence matches "lydia"
+        if (lydiaSequence.current.length === LYDIA_CODE.length &&
+            lydiaSequence.current.every((key, i) => key === LYDIA_CODE[i])) {
+          lydiaSequence.current = [];
+
+          // Unlock achievement (only registers first time, but we always show confetti)
+          unlock('lydia');
+
+          // Always show the notification and confetti for Lydia
+          setCurrentAchievement(ACHIEVEMENTS.lydia);
+          confetti({
+            particleCount: 200,
+            spread: 90,
+            origin: { y: 0.5 },
+            colors: ['#ff69b4', '#ff1493', '#ffb6c1', '#db7093', '#fff0f5'],
             zIndex: 1000,
           });
         }
@@ -437,6 +477,7 @@ export default function App() {
         <main className="main">
           <Carousel
             books={filteredBooks}
+            seriesMap={seriesMap}
             userWishlist={wishlist}
             userVotes={votes}
             onBookSelected={handleBookSelected}
@@ -477,7 +518,7 @@ export default function App() {
           isOpen={showWishlistPanel}
           onClose={() => setShowWishlistPanel(false)}
           wishlistIds={wishlist}
-          books={books}
+          books={allBooks}
           onRemove={removeFromWishlist}
           unlockedAchievements={unlockedAchievements}
         />
@@ -487,7 +528,7 @@ export default function App() {
           onClose={() => setShowHistoryPanel(false)}
           history={history}
           completed={completed}
-          books={books}
+          books={allBooks}
           onClear={clearHistory}
           onClearCompleted={clearCompleted}
         />

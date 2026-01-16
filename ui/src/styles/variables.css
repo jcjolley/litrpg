@@ -108,6 +108,27 @@
   --ff-action-neutral: #a05050;
 }
 
+/* Princess Pink - Unlocked by Lydia Easter Egg */
+:root[data-theme="princess-pink"] {
+  --ff-blue-dark: #1a0814;
+  --ff-blue-mid: #3d1028;
+  --ff-blue-light: #8b2050;
+
+  --ff-border-outer: #ff69b4;
+  --ff-border-inner: #db7093;
+  --ff-border-shadow: #1a0814;
+
+  --ff-text-primary: #fff0f5;
+  --ff-text-secondary: #ffb6c1;
+  --ff-text-narrator: #dda0dd;
+  --ff-text-highlight: #ff1493;
+  --ff-text-muted: #c08090;
+
+  --ff-action-confirm: #ff69b4;
+  --ff-action-cancel: #dc143c;
+  --ff-action-neutral: #db7093;
+}
+
 /* Rainbow Shift - Unlocked by Completionist */
 :root[data-theme="rainbow-shift"] {
   --ff-blue-dark: #000020;

@@ -15,7 +15,8 @@ class RetrieveBooksResource(val booksService: BooksService) {
     fun getBooks(
         @QueryParam("author") author: String?,
         @QueryParam("narrator") narrator: String?,
-        @QueryParam("genre") genre: String?,
+        @QueryParam("genres") genresParam: String?,     // Comma-separated list, OR logic
+        @QueryParam("excludeGenres") excludeGenresParam: String?,  // Comma-separated list to exclude
         @QueryParam("popularity") popularity: String?,  // "popular" or "niche"
         @QueryParam("length") length: String?,          // "Short", "Medium", "Long", "Epic"
         @QueryParam("source") source: String?,          // "AUDIBLE" or "ROYAL_ROAD"
@@ -27,11 +28,16 @@ class RetrieveBooksResource(val booksService: BooksService) {
             return booksService.getBooksAddedSince(since)
         }
 
+        // Parse comma-separated genre lists
+        val genres = genresParam?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+        val excludeGenres = excludeGenresParam?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+
         // Use combined query - supports multiple filters
         return booksService.queryBooks(
             author = author,
             narrator = narrator,
-            genre = genre,
+            genres = genres,
+            excludeGenres = excludeGenres,
             popularity = popularity,
             length = length,
             source = source,

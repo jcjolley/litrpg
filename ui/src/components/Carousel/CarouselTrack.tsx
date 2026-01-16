@@ -10,11 +10,13 @@ interface CarouselTrackProps {
   spinning: boolean;
   userWishlist: string[];
   userVotes: { [bookId: string]: VoteType };
+  seriesMap?: Map<string, Book[]>;
   containerWidth: number;
   containerHeight: number;
   onCoverClick?: () => void;
   onCardClick?: (index: number) => void;
   onVote?: (bookId: string, vote: VoteType) => void;
+  onSeriesBookClick?: (book: Book) => void;
 }
 
 // Selection point - where the "featured" card sits (in degrees)
@@ -51,11 +53,13 @@ export function CarouselTrack({
   spinning,
   userWishlist,
   userVotes,
+  seriesMap,
   containerWidth,
   containerHeight,
   onCoverClick,
   onCardClick,
   onVote,
+  onSeriesBookClick,
 }: CarouselTrackProps) {
   const anglePerItem = 360 / books.length;
 
@@ -148,8 +152,10 @@ export function CarouselTrack({
               isInteractive={isAtCenter}
               isWishlisted={userWishlist.includes(book.id)}
               userVote={userVotes[book.id] || null}
+              seriesMap={seriesMap}
               onCardClick={isAtCenter ? onCoverClick : undefined}
               onVote={onVote ? (vote) => onVote(book.id, vote) : undefined}
+              onSeriesBookClick={onSeriesBookClick}
             />
           </div>
         );

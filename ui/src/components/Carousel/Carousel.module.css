@@ -214,11 +214,34 @@
   flex-shrink: 0;
 }
 
+.cardLargeSeriesContainer {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .cardLargeSeries {
   font-size: clamp(0.625rem, 1.5cqi, 0.875rem);
   color: var(--ff-text-highlight);
   margin: clamp(0.125rem, 0.5cqi, 0.25rem) 0 0;
   flex-shrink: 0;
+}
+
+.seriesLink {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  transition: all 0.15s ease;
+}
+
+.seriesLink:hover {
+  text-decoration-style: solid;
+  filter: brightness(1.2);
+}
+
+.seriesLink:focus {
+  outline: 1px dashed var(--ff-text-highlight);
+  outline-offset: 2px;
 }
 
 .cardLargeStats {
@@ -232,6 +255,16 @@
 .cardLargeStat {
   font-size: clamp(0.625rem, 1.5cqi, 0.875rem);
   color: var(--ff-text-secondary);
+}
+
+.cardLargeGenres {
+  font-size: clamp(0.5rem, 1.25cqi, 0.75rem);
+  color: var(--ff-text-highlight);
+  margin: clamp(0.125rem, 0.5cqi, 0.25rem) 0;
+  opacity: 0.85;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 /* Vote buttons - top right corner */

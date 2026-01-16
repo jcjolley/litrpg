@@ -127,6 +127,15 @@ export const ACHIEVEMENTS: Record<string, Achievement> = {
     effect: 'You feel more connected to the realm',
     effectType: 'feature',
   },
+  lydia: {
+    id: 'lydia',
+    title: 'ACHIEVEMENT UNLOCKED!',
+    subtitle: "Lydia's Secret",
+    description: 'For my little adventurer Lydia - You are my sunshine <3',
+    effect: 'Princess Pink theme unlocked',
+    effectType: 'visual',
+    themeUnlock: 'princess-pink',
+  },
   completionist: {
     id: 'completionist',
     title: 'ACHIEVEMENT UNLOCKED!',

@@ -84,147 +84,60 @@ class BooksService(
     }
 
     /**
-     * Query books with combined filters.
-     * Uses the most selective GSI, then filters remaining criteria in memory.
+     * Query books with combined filters using in-memory filtering.
+     * All filtering is done in-memory after a full table scan.
      */
     fun queryBooks(
         author: String? = null,
         narrator: String? = null,
-        genre: String? = null,
+        genres: List<String>? = null,  // OR logic: match any genre
+        excludeGenres: List<String>? = null,  // Exclude books with any of these genres
         popularity: String? = null,  // "popular" or "niche"
         length: String? = null,       // "Short", "Medium", "Long", "Epic"
         source: String? = null,       // "AUDIBLE" or "ROYAL_ROAD"
         limit: Int = 50
     ): List<Book> {
-        // Fetch more than limit to allow for in-memory filtering
-        val fetchLimit = limit * 3
+        var filtered = getBooks().asSequence()
 
-        // Query using the most selective GSI (author/narrator/genre/length are more selective than popularity)
-        val baseResults = when {
-            author != null -> getBooksByAuthor(author, fetchLimit)
-            narrator != null -> getBooksByNarrator(narrator, fetchLimit)
-            genre != null -> getBooksByGenre(genre, fetchLimit)
-            length != null -> getBooksByLength(length, fetchLimit)
-            popularity != null -> {
-                val isPopular = popularity.equals("popular", ignoreCase = true)
-                getBooksByPopularity(isPopular, fetchLimit)
+        // Apply filters
+        if (author != null) {
+            filtered = filtered.filter { it.author.equals(author, ignoreCase = true) }
+        }
+        if (narrator != null) {
+            filtered = filtered.filter { it.narrator?.equals(narrator, ignoreCase = true) == true }
+        }
+        if (!genres.isNullOrEmpty()) {
+            // OR logic: book must have at least one of the specified genres
+            filtered = filtered.filter { book ->
+                book.genres.any { it in genres }
             }
-            else -> getBooks().take(fetchLimit)
         }
-
-        // Apply remaining filters in memory
-        var filtered = baseResults.asSequence()
-
-        val primaryQueryUsed = author != null || narrator != null
-        if (primaryQueryUsed && genre == null && length == null && popularity == null) {
-            // Author/narrator was the primary query, no additional filtering needed
-        } else {
-            if (author != null) filtered = filtered.filter { it.author == author }
-            if (narrator != null) filtered = filtered.filter { it.narrator == narrator }
-            if (genre != null) filtered = filtered.filter { it.genre == genre }
-            if (length != null) filtered = filtered.filter { it.lengthCategory == length }
+        if (!excludeGenres.isNullOrEmpty()) {
+            // Exclude books that have any of the excluded genres
+            filtered = filtered.filter { book ->
+                book.genres.none { it in excludeGenres }
+            }
         }
-
-        // Apply source filter (always, since no GSI for source yet)
+        if (length != null) {
+            filtered = filtered.filter { it.lengthCategory.equals(length, ignoreCase = true) }
+        }
         if (source != null) {
             filtered = filtered.filter { it.source.equals(source, ignoreCase = true) }
         }
 
-        // Apply popularity sorting if specified (and wasn't the primary query)
-        val result = if (popularity != null && author == null && narrator == null && genre == null && length == null) {
-            // Popularity was primary query, already sorted
-            filtered.toList()
-        } else if (popularity != null) {
-            // Re-sort by popularity
+        // Apply sorting by popularity
+        val sorted = if (popularity != null) {
             val isPopular = popularity.equals("popular", ignoreCase = true)
             if (isPopular) {
-                filtered.sortedByDescending { it.numRatings }.toList()
+                filtered.sortedByDescending { it.numRatings }
             } else {
-                filtered.sortedBy { it.numRatings }.toList()
+                filtered.sortedBy { it.numRatings }
             }
         } else {
-            filtered.toList()
+            filtered
         }
 
-        return result.take(limit)
-    }
-
-    // GSI Query Methods
-
-    /**
-     * Query books by author using GSI, sorted by rating descending
-     */
-    fun getBooksByAuthor(author: String, limit: Int = 20): List<Book> {
-        val index = bookTable.index("author-index")
-        val queryConditional = QueryConditional.keyEqualTo(
-            Key.builder().partitionValue(author).build()
-        )
-        return index.query { r ->
-            r.queryConditional(queryConditional)
-                .scanIndexForward(false)  // Descending by rating
-                .limit(limit)
-        }.flatMap { it.items() }.toList()
-    }
-
-    /**
-     * Query books by genre using GSI, sorted by numRatings descending
-     */
-    fun getBooksByGenre(genre: String, limit: Int = 20): List<Book> {
-        val index = bookTable.index("genre-index")
-        val queryConditional = QueryConditional.keyEqualTo(
-            Key.builder().partitionValue(genre).build()
-        )
-        return index.query { r ->
-            r.queryConditional(queryConditional)
-                .scanIndexForward(false)  // Descending by numRatings (most popular first)
-                .limit(limit)
-        }.flatMap { it.items() }.toList()
-    }
-
-    /**
-     * Query popular books (high numRatings) or niche books (low numRatings)
-     * Uses the gsiPartition="BOOK" fixed key to query all items sorted by numRatings
-     */
-    fun getBooksByPopularity(popular: Boolean, limit: Int = 20): List<Book> {
-        val index = bookTable.index("popularity-index")
-        val queryConditional = QueryConditional.keyEqualTo(
-            Key.builder().partitionValue("BOOK").build()
-        )
-        return index.query { r ->
-            r.queryConditional(queryConditional)
-                .scanIndexForward(!popular)  // false = descending (popular), true = ascending (niche)
-                .limit(limit)
-        }.flatMap { it.items() }.toList()
-    }
-
-    /**
-     * Query books by length category using GSI, sorted by rating descending
-     */
-    fun getBooksByLength(lengthCategory: String, limit: Int = 20): List<Book> {
-        val index = bookTable.index("length-index")
-        val queryConditional = QueryConditional.keyEqualTo(
-            Key.builder().partitionValue(lengthCategory).build()
-        )
-        return index.query { r ->
-            r.queryConditional(queryConditional)
-                .scanIndexForward(false)  // Descending by rating
-                .limit(limit)
-        }.flatMap { it.items() }.toList()
-    }
-
-    /**
-     * Query books by narrator using GSI, sorted by rating descending
-     */
-    fun getBooksByNarrator(narrator: String, limit: Int = 20): List<Book> {
-        val index = bookTable.index("narrator-index")
-        val queryConditional = QueryConditional.keyEqualTo(
-            Key.builder().partitionValue(narrator).build()
-        )
-        return index.query { r ->
-            r.queryConditional(queryConditional)
-                .scanIndexForward(false)  // Descending by rating
-                .limit(limit)
-        }.flatMap { it.items() }.toList()
+        return sorted.take(limit).toList()
     }
 
     /**

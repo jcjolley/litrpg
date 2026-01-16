@@ -62,7 +62,7 @@ describe('useBooks', () => {
   });
 
   it('should fetch books on initial load', async () => {
-    const mockBooks = Array.from({ length: 30 }, (_, i) => createMockBook(`book-${i}`));
+    const mockBooks = Array.from({ length: 10 }, (_, i) => createMockBook(`book-${i}`));
     mockGetBooks.mockResolvedValueOnce(mockBooks);
 
     const { result } = renderHook(() => useBooks());
@@ -72,23 +72,21 @@ describe('useBooks', () => {
     });
 
     expect(mockGetBooks).toHaveBeenCalled();
-    expect(result.current.books.length).toBe(30);
+    expect(result.current.books.length).toBe(10);
+    expect(result.current.allBooks.length).toBe(10);
   });
 
-  it('should deduplicate books when fetching incrementally', async () => {
-    // Set up cached books in localStorage
-    const cachedBooks = Array.from({ length: 30 }, (_, i) => {
-      const book = createMockBook(`book-${i}`);
-      book.addedAt = Date.now() - 10000; // 10 seconds ago
-      return book;
-    });
+  it('should use incremental sync when cache exists', async () => {
+    // Pre-populate cache
+    const cachedBooks = Array.from({ length: 5 }, (_, i) =>
+      createMockBook(`cached-${i}`)
+    );
     localStorage.setItem('litrpg-books-cache', JSON.stringify(cachedBooks));
 
-    // API returns some duplicates and some new books
-    const newBooks = [
-      ...Array.from({ length: 5 }, (_, i) => createMockBook(`book-${i}`)), // duplicates
-      ...Array.from({ length: 10 }, (_, i) => createMockBook(`new-book-${i}`)), // new books
-    ];
+    // New books from API
+    const newBooks = Array.from({ length: 3 }, (_, i) =>
+      createMockBook(`new-${i}`)
+    );
     mockGetBooks.mockResolvedValueOnce(newBooks);
 
     const { result } = renderHook(() => useBooks());
@@ -97,13 +95,24 @@ describe('useBooks', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    // Should have 30 cached + 10 new = 40 books (duplicates removed)
-    expect(result.current.books.length).toBe(40);
+    // Should have merged cached + new books
+    expect(result.current.books.length).toBe(8);
   });
 
-  it('should refetch books when calling refetch', async () => {
-    const mockBooks = Array.from({ length: 30 }, (_, i) => createMockBook(`book-${i}`));
-    mockGetBooks.mockResolvedValue(mockBooks);
+  it('should deduplicate books when merging with cache', async () => {
+    // Pre-populate cache
+    const cachedBooks = Array.from({ length: 5 }, (_, i) =>
+      createMockBook(`book-${i}`)
+    );
+    localStorage.setItem('litrpg-books-cache', JSON.stringify(cachedBooks));
+
+    // API returns some duplicates and some new
+    const apiBooks = [
+      createMockBook('book-0'), // duplicate
+      createMockBook('book-1'), // duplicate
+      createMockBook('new-book'), // new
+    ];
+    mockGetBooks.mockResolvedValueOnce(apiBooks);
 
     const { result } = renderHook(() => useBooks());
 
@@ -111,15 +120,8 @@ describe('useBooks', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    // Clear mock calls from initial load
-    mockGetBooks.mockClear();
-
-    // Trigger refetch
-    await act(async () => {
-      await result.current.refetch();
-    });
-
-    expect(mockGetBooks).toHaveBeenCalledTimes(1);
+    // Should have 5 cached + 1 new = 6 books (duplicates removed)
+    expect(result.current.books.length).toBe(6);
   });
 
   it('should apply filters correctly', async () => {
@@ -156,8 +158,40 @@ describe('useBooks', () => {
     expect(result.current.books.length).toBe(2);
     expect(result.current.books.every((b) => b.genre === 'LitRPG')).toBe(true);
 
-    // All books should still be accessible
+    // All books should still be accessible via allBooks
     expect(result.current.allBooks.length).toBe(4);
+  });
+
+  it('should apply exclude filters correctly', async () => {
+    const mockBooks = [
+      createMockBook('book-1', 'LitRPG'),
+      createMockBook('book-2', 'Cultivation'),
+      createMockBook('book-3', 'LitRPG'),
+      createMockBook('book-4', 'GameLit'),
+    ];
+    mockGetBooks.mockResolvedValueOnce(mockBooks);
+
+    const { result } = renderHook(() => useBooks());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Apply filter to exclude LitRPG
+    act(() => {
+      result.current.setFilters({
+        genre: { LitRPG: 'exclude' },
+        author: {},
+        narrator: {},
+        length: {},
+        popularity: {},
+        source: {},
+      });
+    });
+
+    // Should have all books except LitRPG
+    expect(result.current.books.length).toBe(2);
+    expect(result.current.books.every((b) => b.genre !== 'LitRPG')).toBe(true);
   });
 
   it('should handle API errors gracefully', async () => {
@@ -174,9 +208,14 @@ describe('useBooks', () => {
     expect(result.current.books.length).toBe(0);
   });
 
-  it('should handle refetch errors without losing existing books', async () => {
-    const mockBooks = Array.from({ length: 30 }, (_, i) => createMockBook(`book-${i}`));
-    mockGetBooks.mockResolvedValueOnce(mockBooks);
+  it('should use cached books on API error', async () => {
+    // Pre-populate cache
+    const cachedBooks = Array.from({ length: 5 }, (_, i) =>
+      createMockBook(`cached-${i}`)
+    );
+    localStorage.setItem('litrpg-books-cache', JSON.stringify(cachedBooks));
+
+    mockGetBooks.mockRejectedValueOnce(new Error('Network error'));
 
     const { result } = renderHook(() => useBooks());
 
@@ -184,17 +223,61 @@ describe('useBooks', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    // Make refetch fail
-    mockGetBooks.mockRejectedValueOnce(new Error('Refetch failed'));
+    // Should still have cached books
+    expect(result.current.error).toBeTruthy();
+    expect(result.current.books.length).toBe(5);
+  });
+
+  it('should persist filters to localStorage', async () => {
+    mockGetBooks.mockResolvedValueOnce([]);
+
+    const { result } = renderHook(() => useBooks());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    const newFilters = {
+      genre: { LitRPG: 'include' as const },
+      author: {},
+      narrator: {},
+      length: {},
+      popularity: {},
+      source: {},
+    };
+
+    act(() => {
+      result.current.setFilters(newFilters);
+    });
+
+    const stored = localStorage.getItem('litrpg-filters');
+    expect(stored).toBeTruthy();
+    expect(JSON.parse(stored!)).toEqual(newFilters);
+  });
+
+  it('should support refetch to reload books', async () => {
+    const initialBooks = [createMockBook('book-1')];
+    const updatedBooks = [createMockBook('book-1'), createMockBook('book-2')];
+
+    mockGetBooks.mockResolvedValueOnce(initialBooks);
+
+    const { result } = renderHook(() => useBooks());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.books.length).toBe(1);
+
+    // Setup for refetch
+    mockGetBooks.mockResolvedValueOnce(updatedBooks);
 
     await act(async () => {
       await result.current.refetch();
     });
 
-    // Error should be set
-    expect(result.current.error).toBeTruthy();
-
-    // Original books should still be present (from cache)
-    expect(result.current.books.length).toBeGreaterThanOrEqual(0);
+    // Note: Due to incremental sync logic, this will merge with cache
+    // The exact behavior depends on addedAt values
+    expect(mockGetBooks).toHaveBeenCalledTimes(2);
   });
 });

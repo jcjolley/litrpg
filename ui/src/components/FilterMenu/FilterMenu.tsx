@@ -13,21 +13,39 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-// Filter options (without the "ALL/ANY" options - neutral state replaces them)
+// Filter options - Expanded genre taxonomy (alphabetically sorted)
 const GENRES = [
+  { value: 'Academy', label: 'ACADEMY' },
+  { value: 'Base Building', label: 'BASE BUILDING' },
+  { value: 'Comedy', label: 'COMEDY' },
+  { value: 'Crafting', label: 'CRAFTING' },
   { value: 'Cultivation', label: 'CULTIVATION' },
-  { value: 'System Apocalypse', label: 'SYSTEM APOCALYPSE' },
+  { value: 'Dark Fantasy', label: 'DARK FANTASY' },
+  { value: 'Deck Building', label: 'DECK BUILDING' },
   { value: 'Dungeon Core', label: 'DUNGEON CORE' },
+  { value: 'Dungeon Diving', label: 'DUNGEON DIVING' },
+  { value: 'GameLit', label: 'GAMELIT' },
+  { value: 'Harem', label: 'HAREM' },
   { value: 'Isekai', label: 'ISEKAI' },
+  { value: 'Kingdom Building', label: 'KINGDOM BUILDING' },
+  { value: 'LitRPG', label: 'LITRPG' },
+  { value: 'Military', label: 'MILITARY' },
+  { value: 'Monster Evolution', label: 'MONSTER EVOLUTION' },
+  { value: 'Party-Based', label: 'PARTY-BASED' },
+  { value: 'Portal Fantasy', label: 'PORTAL FANTASY' },
+  { value: 'Post-Apocalyptic', label: 'POST-APOCALYPTIC' },
+  { value: 'Progression Fantasy', label: 'PROGRESSION FANTASY' },
+  { value: 'Regression', label: 'REGRESSION' },
+  { value: 'Reincarnation', label: 'REINCARNATION' },
+  { value: 'Slice of Life', label: 'SLICE OF LIFE' },
+  { value: 'Solo Leveling', label: 'SOLO LEVELING' },
+  { value: 'Summoner', label: 'SUMMONER' },
+  { value: 'System Apocalypse', label: 'SYSTEM APOCALYPSE' },
   { value: 'Time Loop', label: 'TIME LOOP' },
   { value: 'Tower Climb', label: 'TOWER CLIMB' },
-  { value: 'Academy', label: 'ACADEMY' },
-  { value: 'GameLit', label: 'GAMELIT' },
-  { value: 'Progression Fantasy', label: 'PROGRESSION FANTASY' },
-  { value: 'Kingdom Building', label: 'KINGDOM BUILDING' },
-  { value: 'Reincarnation', label: 'REINCARNATION' },
-  { value: 'Monster Evolution', label: 'MONSTER EVOLUTION' },
-  { value: 'Portal Fantasy', label: 'PORTAL FANTASY' },
+  { value: 'Virtual Reality', label: 'VIRTUAL REALITY' },
+  { value: 'Wuxia', label: 'WUXIA' },
+  { value: 'Xianxia', label: 'XIANXIA' },
   { value: '__uncategorized__', label: 'UNCATEGORIZED' },
 ];
 

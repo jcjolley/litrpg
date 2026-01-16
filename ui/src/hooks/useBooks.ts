@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Book } from '../types/book';
 import { getBooks, type BookFilters, type CategoryFilters, EMPTY_FILTERS, getFilterValues } from '../api/books';
+import { groupBooksBySeries } from '../utils/seriesGrouping';
 
 const FILTERS_KEY = 'litrpg-filters';
 const BOOKS_CACHE_KEY = 'litrpg-books-cache';
@@ -64,38 +65,43 @@ function getMaxAddedAt(books: Book[]): number {
   return Math.max(...books.map((b) => b.addedAt || 0));
 }
 
-// Special value for uncategorized items (null genre, etc.)
+// Special value for uncategorized items (empty genres array, etc.)
 const UNCATEGORIZED = '__uncategorized__';
 
-// Get the book's value for a given filter category
-function getBookValue(book: Book, category: keyof BookFilters): string | null {
+// Get the book's value(s) for a given filter category
+// Returns an array for multi-value categories (genre), or wraps single value in array
+function getBookValues(book: Book, category: keyof BookFilters): string[] {
   switch (category) {
     case 'genre':
-      return book.genre ?? UNCATEGORIZED; // Map null to special uncategorized value
+      // Multi-genre: return all genres, or [UNCATEGORIZED] if empty
+      return book.genres.length > 0 ? book.genres : [UNCATEGORIZED];
     case 'author':
-      return book.author;
+      return book.author ? [book.author] : [];
     case 'narrator':
-      return book.narrator;
-    case 'length':
+      return book.narrator ? [book.narrator] : [];
+    case 'length': {
       // Map length string to category
-      if (!book.length) return null;
+      if (!book.length) return [];
       const hours = parseFloat(book.length.split(' ')[0]) || 0;
-      if (hours < 10) return 'Short';
-      if (hours < 20) return 'Medium';
-      if (hours < 40) return 'Long';
-      return 'Epic';
-    case 'popularity':
+      if (hours < 10) return ['Short'];
+      if (hours < 20) return ['Medium'];
+      if (hours < 40) return ['Long'];
+      return ['Epic'];
+    }
+    case 'popularity': {
       // Map based on metrics
       const score = book.wishlistCount + book.clickThroughCount;
-      return score > 10 ? 'popular' : 'niche';
+      return score > 10 ? ['popular'] : ['niche'];
+    }
     case 'source':
-      return book.source;
+      return book.source ? [book.source] : [];
     default:
-      return null;
+      return [];
   }
 }
 
 // Apply tri-state filters to books
+// For multi-value categories (genre): OR logic for includes, ANY match excludes
 function applyFilters(books: Book[], filters: BookFilters): Book[] {
   return books.filter(book => {
     for (const [category, categoryFilters] of Object.entries(filters) as [keyof BookFilters, CategoryFilters][]) {
@@ -106,18 +112,20 @@ function applyFilters(books: Book[], filters: BookFilters): Book[] {
         continue; // No filters for this category
       }
 
-      const bookValue = getBookValue(book, category);
+      const bookValues = getBookValues(book, category);
 
-      // If there are include filters, book must match at least one
+      // If there are include filters, book must match at least one (OR logic)
       if (includes.length > 0) {
-        if (!bookValue || !includes.includes(bookValue)) {
+        const hasMatch = bookValues.some(v => includes.includes(v));
+        if (!hasMatch) {
           return false;
         }
       }
 
       // If there are exclude filters, book must not match any
       if (excludes.length > 0) {
-        if (bookValue && excludes.includes(bookValue)) {
+        const hasExcluded = bookValues.some(v => excludes.includes(v));
+        if (hasExcluded) {
           return false;
         }
       }
@@ -127,8 +135,9 @@ function applyFilters(books: Book[], filters: BookFilters): Book[] {
 }
 
 interface UseBooksResult {
-  books: Book[];           // Filtered books for display
-  allBooks: Book[];        // All books (unfiltered) - the full catalog
+  books: Book[];           // Filtered books for display (series-grouped: only first book of each series)
+  allBooks: Book[];        // All books (unfiltered, not grouped) - the full catalog
+  seriesMap: Map<string, Book[]>;  // Map of series name to all books in series
   loading: boolean;
   error: Error | null;
   filters: BookFilters;
@@ -188,7 +197,13 @@ export function useBooks(): UseBooksResult {
   }, [fetchBooks]);
 
   // Apply filters client-side
-  const books = useMemo(() => applyFilters(allBooks, filters), [allBooks, filters]);
+  const filteredBooks = useMemo(() => applyFilters(allBooks, filters), [allBooks, filters]);
+
+  // Group filtered books by series - only show first book of each series
+  const { visibleBooks: books, seriesMap } = useMemo(
+    () => groupBooksBySeries(filteredBooks),
+    [filteredBooks]
+  );
 
   const handleSetFilters = useCallback((newFilters: BookFilters) => {
     setFilters(newFilters);
@@ -202,6 +217,7 @@ export function useBooks(): UseBooksResult {
   return {
     books,
     allBooks,
+    seriesMap,
     loading,
     error,
     filters,

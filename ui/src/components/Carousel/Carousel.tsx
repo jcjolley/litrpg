@@ -32,6 +32,7 @@ function useContainerSize(ref: React.RefObject<HTMLElement | null>) {
 
 interface CarouselProps {
   books: Book[];
+  seriesMap?: Map<string, Book[]>;  // Map of series to books for tooltip
   userWishlist: string[];
   userVotes: { [bookId: string]: VoteType };
   onBookSelected: (book: Book) => void;
@@ -52,6 +53,7 @@ interface CarouselProps {
 
 export function Carousel({
   books,
+  seriesMap,
   userWishlist,
   userVotes,
   onBookSelected,
@@ -170,6 +172,43 @@ export function Carousel({
     [spinState, selectedIndex, books.length, nudgeMultiple]
   );
 
+  // Handle clicking a book from the series tooltip - navigate to that book
+  const handleSeriesBookClick = useCallback(
+    (targetBook: Book) => {
+      if (spinState === 'spinning' || spinState === 'continuous' || spinState === 'nudging') return;
+
+      // Find the book in the books array
+      const targetIndex = books.findIndex((b) => b.id === targetBook.id);
+      if (targetIndex === -1) {
+        console.warn(`Series book ${targetBook.id} not found in carousel books`);
+        return;
+      }
+
+      if (selectedIndex === null) {
+        // No current selection - just select this book directly
+        setSelectedIndex(targetIndex);
+        onBookSelected(targetBook);
+        return;
+      }
+
+      // Calculate shortest path (accounting for wrap-around)
+      let diff = targetIndex - selectedIndex;
+      const halfLength = books.length / 2;
+
+      // Take the shorter path around the wheel
+      if (diff > halfLength) diff -= books.length;
+      else if (diff < -halfLength) diff += books.length;
+
+      if (diff === 0) return; // Already at this book
+
+      const direction = diff > 0 ? 'left' : 'right';
+      const steps = Math.abs(diff);
+
+      nudgeMultiple(direction, steps);
+    },
+    [spinState, books, selectedIndex, nudgeMultiple, onBookSelected]
+  );
+
   // Keyboard navigation - arrow keys to nudge left/right
   useEffect(() => {
     if (spinState !== 'stopped') return;
@@ -273,11 +312,13 @@ export function Carousel({
           spinning={spinState === 'spinning' || spinState === 'continuous' || spinState === 'nudging'}
           userWishlist={userWishlist}
           userVotes={userVotes}
+          seriesMap={seriesMap}
           containerWidth={containerSize.width}
           containerHeight={containerSize.height}
           onCoverClick={onCoverClick}
           onCardClick={handleCardClick}
           onVote={onVote}
+          onSeriesBookClick={handleSeriesBookClick}
         />
       </div>
 
