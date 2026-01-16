@@ -69,6 +69,46 @@ curator/src/main/kotlin/.../curator/
 
 - **PRD-first for multistep tasks** - When a task involves 3+ files or multiple steps: (1) check `docs/prd/` for existing PRD, (2) if none exists, draft one using `@docs/prd/TEMPLATE.md` and await approval, (3) only then implement.
 
+## Multi-Session Development (Git Worktrees)
+
+Multiple Claude sessions can work in parallel using git worktrees. Each session gets an isolated branch.
+
+### Commands
+
+```bash
+make worktree-list      # See all worktrees and their status vs main
+make worktree-sync      # Rebase current branch onto origin/main
+make ship               # Test → merge → push → cleanup (run from worktree)
+make worktree-cleanup   # Remove worktrees for already-merged branches
+```
+
+### Session Lifecycle
+
+1. **Claude creates worktree** - Automatic via Claude Code's `--worktree` flag
+2. **Work & commit** - Make changes, commit frequently with descriptive messages
+3. **Ready to merge** - Run `make ship` which will:
+   - Check for uncommitted changes (fails if dirty)
+   - Rebase onto latest `origin/main` (fails if conflicts)
+   - Run `make test` (fails if tests fail)
+   - Fast-forward merge to main
+   - Push to origin
+   - Delete branch and remove worktree
+4. **Other sessions rebase** - After a merge, other sessions run `make worktree-sync`
+
+### Conflict Resolution
+
+If `make ship` fails during rebase:
+1. Resolve conflicts manually
+2. Run `git rebase --continue`
+3. Run `make ship` again
+
+### Best Practices
+
+- **Commit early, commit often** - Small commits are easier to rebase
+- **Sync before starting new work** - Run `make worktree-sync` at session start
+- **First-ready, first-merged** - Complete features merge first; others rebase after
+- **Keep features small** - Reduces merge conflicts between sessions
+
 ## Development
 
 **Prerequisites**: JDK 21, Docker, Ollama

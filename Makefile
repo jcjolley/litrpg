@@ -1,7 +1,7 @@
 # Makefile for LitRPG project
 SHELL := /bin/bash
 
-.PHONY: build build-lambda build-ui deploy-ui deploy test test-class clean aws-login stats stats-local list list-local add remove refresh export-prod import-local setup-local-prod localstack localstack-init localstack-down curator curator-local help
+.PHONY: build build-lambda build-ui deploy-ui deploy test test-ui test-all test-class clean aws-login stats stats-local list list-local add remove refresh export-prod import-local setup-local-prod localstack localstack-init localstack-down curator curator-local help ship ship-deploy worktree-list worktree-sync worktree-cleanup
 
 # Check AWS credentials and login if needed
 aws-login:
@@ -43,9 +43,16 @@ deploy: build-lambda build-ui deploy-infra deploy-ui
 build:
 	./gradlew build -x test
 
-# Run all tests (requires LocalStack running)
+# Run backend tests (requires LocalStack running)
 test: localstack-init
 	./gradlew test
+
+# Run UI tests
+test-ui:
+	cd ui && npm test -- --run
+
+# Run all tests (backend + UI)
+test-all: test test-ui
 
 # Run a specific test class
 # Usage: make test-class CLASS=BooksQueryTest
@@ -164,8 +171,10 @@ help:
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev              Start local dev environment"
-	@echo "  make test             Run all tests (starts LocalStack if needed)"
-	@echo "  make test-class CLASS=<name>  Run single test class"
+	@echo "  make test             Run backend tests (starts LocalStack if needed)"
+	@echo "  make test-ui          Run UI tests"
+	@echo "  make test-all         Run all tests (backend + UI)"
+	@echo "  make test-class CLASS=<name>  Run single backend test class"
 	@echo "  make localstack       Start LocalStack container"
 	@echo "  make localstack-init  Start LocalStack and create DynamoDB table"
 	@echo "  make clean            Clean build artifacts"
@@ -190,3 +199,113 @@ help:
 	@echo "  make stats-local      View local analytics"
 	@echo "  make import-local     Import from data/books-prod.json"
 	@echo "  make setup-local-prod Export prod + import to local"
+	@echo ""
+	@echo "Git Worktree (Multi-Session):"
+	@echo "  make ship             Test, merge to main, push, cleanup (run from worktree)"
+	@echo "  make ship-deploy      Ship + full deploy to production"
+	@echo "  make worktree-list    List all worktrees with status"
+	@echo "  make worktree-sync    Rebase current branch onto origin/main"
+	@echo "  make worktree-cleanup Remove merged worktrees"
+
+# =============================================================================
+# Git Worktree Management (Multi-Session Claude Workflow)
+# =============================================================================
+
+# Worktree base directory
+WORKTREE_BASE := $(HOME)/.claude-worktrees/litrpg
+
+# List all worktrees with their status
+worktree-list:
+	@echo "=== Git Worktrees ==="
+	@git worktree list
+	@echo ""
+	@echo "=== Branch Status ==="
+	@for wt in $$(git worktree list --porcelain | grep "^worktree" | cut -d' ' -f2); do \
+		branch=$$(git -C "$$wt" branch --show-current 2>/dev/null); \
+		if [ -n "$$branch" ] && [ "$$branch" != "main" ]; then \
+			ahead=$$(git -C "$$wt" rev-list --count origin/main..HEAD 2>/dev/null || echo "?"); \
+			behind=$$(git -C "$$wt" rev-list --count HEAD..origin/main 2>/dev/null || echo "?"); \
+			echo "  $$branch: +$$ahead/-$$behind commits vs origin/main"; \
+		fi; \
+	done
+
+# Rebase current branch onto latest origin/main
+worktree-sync:
+	@if [ "$$(git branch --show-current)" = "main" ]; then \
+		echo "Already on main, pulling latest..."; \
+		git pull origin main; \
+	else \
+		echo "Fetching and rebasing onto origin/main..."; \
+		git fetch origin main; \
+		git rebase origin/main; \
+	fi
+
+# Ship: test, merge to main, push, and cleanup worktree
+# Run this from a feature worktree when ready to merge
+ship:
+	@BRANCH=$$(git branch --show-current); \
+	WORKTREE_PATH=$$(pwd); \
+	MAIN_WORKTREE=$$(git worktree list | grep '\[main\]' | awk '{print $$1}'); \
+	if [ "$$BRANCH" = "main" ]; then \
+		echo "Error: Already on main. Run this from a feature worktree."; \
+		exit 1; \
+	fi; \
+	echo "=== Shipping $$BRANCH ==="; \
+	echo ""; \
+	echo "Step 1/6: Checking for uncommitted changes..."; \
+	if ! git diff --quiet || ! git diff --cached --quiet; then \
+		echo "Error: You have uncommitted changes. Commit or stash them first."; \
+		exit 1; \
+	fi; \
+	echo "Step 2/6: Syncing with origin/main..."; \
+	git fetch origin main; \
+	if ! git rebase origin/main; then \
+		echo "Error: Rebase failed. Resolve conflicts and try again."; \
+		exit 1; \
+	fi; \
+	echo "Step 3/6: Running tests..."; \
+	if ! $(MAKE) test-all; then \
+		echo "Error: Tests failed. Fix them before shipping."; \
+		exit 1; \
+	fi; \
+	echo "Step 4/6: Merging to main..."; \
+	cd "$$MAIN_WORKTREE" && \
+	git checkout main && \
+	git pull origin main && \
+	git merge --ff-only "$$BRANCH"; \
+	echo "Step 5/6: Pushing to origin..."; \
+	git push origin main; \
+	echo "Step 6/6: Cleaning up worktree..."; \
+	cd "$$MAIN_WORKTREE" && \
+	git branch -d "$$BRANCH" && \
+	git worktree remove "$$WORKTREE_PATH"; \
+	echo ""; \
+	echo "=== $$BRANCH shipped successfully! ==="
+
+# Ship and deploy: test, merge, push, cleanup, then full deploy
+ship-deploy: ship deploy
+	@echo "=== Deployed to production! ==="
+
+# Clean up worktrees whose branches have been merged to main
+worktree-cleanup:
+	@echo "=== Cleaning up merged worktrees ==="
+	@MAIN_WORKTREE=$$(git worktree list | grep '\[main\]' | awk '{print $$1}'); \
+	for wt in $$(git worktree list --porcelain | grep "^worktree" | cut -d' ' -f2); do \
+		if [ "$$wt" = "$$MAIN_WORKTREE" ]; then continue; fi; \
+		branch=$$(git -C "$$wt" branch --show-current 2>/dev/null); \
+		if [ -z "$$branch" ]; then \
+			echo "Removing orphaned worktree: $$wt"; \
+			git worktree remove --force "$$wt" 2>/dev/null || rm -rf "$$wt"; \
+		elif git branch --merged main | grep -q "$$branch"; then \
+			if git -C "$$wt" status --porcelain | grep -q .; then \
+				echo "Skipping: $$wt ($$branch) - merged but has uncommitted changes"; \
+			else \
+				echo "Removing merged worktree: $$wt ($$branch)"; \
+				git worktree remove "$$wt" && git branch -d "$$branch"; \
+			fi; \
+		else \
+			echo "Keeping: $$wt ($$branch) - not yet merged"; \
+		fi; \
+	done; \
+	git worktree prune; \
+	echo "Done."
