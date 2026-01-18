@@ -67,7 +67,16 @@ curator/src/main/kotlin/.../curator/
 
 ## Workflow
 
-- **PRD-first for multistep tasks** - When a task involves 3+ files or multiple steps: (1) check `docs/prd/` for existing PRD, (2) if none exists, draft one using `@docs/prd/TEMPLATE.md` and await approval, (3) only then implement.
+- **PRD-first for multistep tasks** - When a task involves 3+ files or multiple steps: (1) check `docs/prd/todo/` for existing PRD, (2) if none exists, draft one using `docs/prd/TEMPLATE.md` and await approval, (3) implement, (4) move PRD to `docs/prd/complete/` when done.
+
+### PRD Organization
+
+```
+docs/prd/
+├── TEMPLATE.md       # PRD template
+├── todo/             # PRDs for features not yet implemented
+└── complete/         # PRDs for implemented features
+```
 
 ## Multi-Session Development (Git Worktrees)
 
@@ -124,12 +133,26 @@ If `make ship` fails during rebase:
 - **Main API**: External LocalStack for DynamoDB (Makefile manages), Quarkus Dev Services for Lambda simulation
 - **Curator**: Testcontainers with DynamoDB Local
 - **UI**: Testing Library + MSW (only acceptable mocking)
+- **UI Manual Verification**: All UI features must be verified by connecting to Chrome and manually testing using the Claude Chrome extension before completion
 
 ```bash
 make test                              # All tests (starts LocalStack + creates table)
 make test-class CLASS=BooksQueryTest   # Single test class
 make localstack-init                   # Manual: start LocalStack and create DynamoDB table
 ```
+
+## UI Deployment Policy
+
+**NEVER deploy UI changes without manual browser verification.**
+
+Before running `make deploy-ui` or `make deploy`, you MUST:
+1. Start the dev environment with `make dev`
+2. Connect to Chrome using the Claude Chrome extension
+3. Manually test the new feature or bugfix in the browser
+4. Verify the fix works as expected with real user interactions
+5. Only then proceed with deployment
+
+This is a hard requirement - automated tests alone are not sufficient for UI changes.
 
 ## Infrastructure
 
