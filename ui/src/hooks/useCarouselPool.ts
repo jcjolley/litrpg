@@ -55,10 +55,10 @@ function selectWeightedBooks(
     return shuffleArray(books).slice(0, count);
   }
 
-  // Calculate popularity score for each book
+  // Calculate popularity score for each book (Audible review count)
   const scored = books.map(book => ({
     book,
-    score: book.wishlistCount + book.clickThroughCount,
+    score: book.numRatings,
   }));
 
   // Sort by score (descending for popular, ascending for niche)

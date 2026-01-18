@@ -70,6 +70,12 @@ export function CarouselTrack({
   const containerMin = Math.min(containerWidth, containerHeight);
   const wheelRadius = containerMin * 0.7; // 70% of smaller dimension
 
+  // Don't render cards until we have valid container dimensions
+  // This prevents cards from rendering at (0,0) and causing a "pulsing" effect
+  if (wheelRadius === 0) {
+    return <div className={styles.track} />;
+  }
+
   // Position wheel center so that a card at SELECTION_ANGLE lands at container center
   const wheelCenterX = -wheelRadius * Math.cos(SELECTION_RADIANS);
   const wheelCenterY = -wheelRadius * Math.sin(SELECTION_RADIANS);

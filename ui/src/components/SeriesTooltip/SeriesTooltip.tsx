@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { Book } from '../../types/book';
 import styles from './SeriesTooltip.module.css';
 
@@ -48,7 +49,8 @@ export function SeriesTooltip({
     onBookClick(book);
   };
 
-  return (
+  // Render at document root via portal to escape stacking context issues
+  return createPortal(
     <div className={styles.overlay} onClick={handleOverlayClick} role="dialog" aria-modal="true" data-interactive>
       <div ref={modalRef} className={styles.modal} role="menu" data-interactive>
         <button
@@ -85,6 +87,7 @@ export function SeriesTooltip({
         </ul>
         <div className={styles.hint}>Click a book to view it in the carousel</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

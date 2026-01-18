@@ -2,7 +2,7 @@
 
 .container {
   position: relative;
-  z-index: 200;
+  z-index: 10;
   width: 100%;
   max-width: 700px;
   margin: 0 auto;
@@ -453,6 +453,9 @@
 /* Mobile Responsive */
 @media (max-width: 600px) {
   .container {
+    /* Force filter to wrap to its own row on mobile */
+    flex: 1 0 100%;
+    order: 10;
     max-width: 100%;
     padding: 0;
   }

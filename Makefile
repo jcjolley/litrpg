@@ -1,7 +1,7 @@
 # Makefile for LitRPG project
 SHELL := /bin/bash
 
-.PHONY: build build-lambda build-ui deploy-ui deploy test test-ui test-all test-class clean aws-login stats stats-local list list-local add remove refresh export-prod import-local setup-local-prod localstack localstack-init localstack-down curator curator-local migrate-genres migrate-genres-local announce announce-local help ship ship-deploy worktree-list worktree-sync worktree-cleanup
+.PHONY: build build-lambda build-ui deploy-ui deploy test test-ui test-all test-class typecheck-ui clean aws-login stats stats-local list list-local add remove refresh export-prod import-local setup-local-prod localstack localstack-init localstack-down curator curator-local migrate-genres migrate-genres-local announce announce-local help ship ship-deploy worktree-list worktree-sync worktree-cleanup
 
 # Check AWS credentials and login if needed
 aws-login:
@@ -50,6 +50,10 @@ test: localstack-init
 # Run UI tests
 test-ui:
 	cd ui && npm test -- --run
+
+# TypeScript type checking for UI
+typecheck-ui:
+	cd ui && npx tsc --noEmit
 
 # Run all tests (backend + UI)
 test-all: test test-ui
@@ -225,6 +229,7 @@ help:
 	@echo "  make test-ui          Run UI tests"
 	@echo "  make test-all         Run all tests (backend + UI)"
 	@echo "  make test-class CLASS=<name>  Run single backend test class"
+	@echo "  make typecheck-ui     TypeScript type checking for UI"
 	@echo "  make localstack       Start LocalStack container"
 	@echo "  make localstack-init  Start LocalStack and create DynamoDB table"
 	@echo "  make clean            Clean build artifacts"

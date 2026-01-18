@@ -23,7 +23,7 @@ function migrateOldFilters(stored: unknown): BookFilters {
   // Migrate old format: { genre: "Cultivation" } -> { genre: { "Cultivation": "include" } }
   const migrated: BookFilters = { ...EMPTY_FILTERS };
 
-  const categories = ['genre', 'author', 'narrator', 'length', 'popularity', 'source'] as const;
+  const categories = ['genre', 'author', 'narrator', 'length', 'source'] as const;
   for (const cat of categories) {
     if (old[cat] && typeof old[cat] === 'string') {
       migrated[cat] = { [old[cat] as string]: 'include' };
@@ -89,11 +89,6 @@ function getBookValues(book: Book, category: keyof BookFilters): string[] {
       if (hours < 40) return ['Long'];
       return ['Epic'];
     }
-    case 'popularity': {
-      // Map based on metrics
-      const score = book.wishlistCount + book.clickThroughCount;
-      return score > 10 ? ['popular'] : ['niche'];
-    }
     case 'source':
       return book.source ? [book.source] : [];
     default:
@@ -143,7 +138,8 @@ interface UseBooksResult {
   books: Book[];           // Filtered books for display (series-grouped: only first book of each series)
   allBooks: Book[];        // All books (unfiltered, not grouped) - the full catalog
   seriesMap: Map<string, Book[]>;  // Map of series name to all books in series
-  loading: boolean;
+  loading: boolean;        // True while actively fetching
+  isReady: boolean;        // True if we have books to display (cached or fetched)
   error: Error | null;
   filters: BookFilters;
   setFilters: (filters: BookFilters) => void;
@@ -225,11 +221,15 @@ export function useBooks(): UseBooksResult {
     await fetchBooks();
   }, [fetchBooks]);
 
+  // Ready when we have any books to display (from cache or fetch)
+  const isReady = allBooks.length > 0;
+
   return {
     books,
     allBooks,
     seriesMap,
     loading,
+    isReady,
     error,
     filters,
     setFilters: handleSetFilters,

@@ -45,6 +45,17 @@ AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test aws dynamodb create-table \
   --billing-mode PAY_PER_REQUEST \
   --region us-east-1 2>/dev/null || echo "Table already exists, skipping..."
 
+# Create announcements table
+echo "Creating announcements table..."
+AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test aws dynamodb create-table \
+  --endpoint-url http://localhost:4566 \
+  --table-name litrpg-books-dev-announcements \
+  --attribute-definitions \
+    AttributeName=id,AttributeType=S \
+  --key-schema AttributeName=id,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST \
+  --region us-east-1 2>/dev/null || echo "Announcements table already exists, skipping..."
+
 # 3. Import data (prefer prod data if available, fall back to sample)
 echo ""
 echo "[3/5] Importing books..."

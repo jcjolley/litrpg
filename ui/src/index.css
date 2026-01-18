@@ -69,13 +69,14 @@ img {
 
 .header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  flex-wrap: wrap;
   padding: clamp(0.25rem, 1%, 0.5rem) 0;
   gap: clamp(0.25rem, 1%, 0.5rem);
   flex-shrink: 0;
   position: relative;
-  z-index: 200;
+  z-index: 1000;
 }
 
 .stats-button {

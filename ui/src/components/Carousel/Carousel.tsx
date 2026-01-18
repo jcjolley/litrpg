@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, useMemo, type TouchEvent } from 'react';
+import { useEffect, useLayoutEffect, useState, useCallback, useRef, useMemo, type TouchEvent } from 'react';
 import type { Book } from '../../types/book';
 import type { VoteType } from '../../hooks/useVotes';
 import { CarouselTrack } from './CarouselTrack';
@@ -10,9 +10,18 @@ import styles from './Carousel.module.css';
 function useContainerSize(ref: React.RefObject<HTMLElement | null>) {
   const [size, setSize] = useState({ width: 0, height: 0 });
 
-  useEffect(() => {
-    if (!ref.current) return;
+  // Use useLayoutEffect to measure synchronously after render
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) return;
 
+    // Measure immediately
+    const rect = element.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      setSize({ width: rect.width, height: rect.height });
+    }
+
+    // Observe for future changes
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (entry) {
@@ -23,9 +32,9 @@ function useContainerSize(ref: React.RefObject<HTMLElement | null>) {
       }
     });
 
-    observer.observe(ref.current);
+    observer.observe(element);
     return () => observer.disconnect();
-  }, [ref]);
+  }, []); // Empty deps - runs once after DOM is ready
 
   return size;
 }
@@ -92,6 +101,9 @@ export function Carousel({
   }, [booksProp, injectedBooks]);
   const viewportRef = useRef<HTMLDivElement>(null);
   const containerSize = useContainerSize(viewportRef);
+
+  // Track previous booksProp to detect filter changes
+  const prevBooksPropRef = useRef<Book[] | null>(null);
 
   const handleSpinComplete = useCallback(
     (targetIndex: number) => {
@@ -272,7 +284,7 @@ export function Carousel({
       const timer = setTimeout(doSpin, 500);
       return () => clearTimeout(timer);
     }
-  }, [books.length, continuousSpin]);
+  }, [books.length, continuousSpin, spinState, doSpin]);
 
   // Handle external spin trigger
   useEffect(() => {
@@ -288,32 +300,31 @@ export function Carousel({
     setInjectedBooks(prev => prev.filter(({ book }) => book.id === selectedBookId));
   }, [booksProp, selectedBookId]);
 
-  // When books change (e.g., due to filter), check if current selection is still valid
-  // If the selected book is no longer in the list, spin to a new book
+  // When books change due to filtering, spin to a new book from the filtered set
+  // This ensures clicking a genre tag gives a fresh recommendation
   useEffect(() => {
-    // Only act if we're stopped with a valid selection
-    if (spinState !== 'stopped' || selectedBookId === null || selectedBookId === undefined) return;
-
-    // Check if the currently selected book is still in the books array
-    // Use `books` (which includes injections) instead of `booksProp`
-    const bookStillExists = books.some(book => book.id === selectedBookId);
-
-    if (!bookStillExists && books.length > 0) {
-      // Selected book was removed (probably by a filter), spin to a new one
-      doSpin();
+    // Skip the initial render
+    if (prevBooksPropRef.current === null) {
+      prevBooksPropRef.current = booksProp;
+      return;
     }
-  }, [books, selectedBookId, spinState, doSpin]);
+
+    // Skip if booksProp reference hasn't changed
+    if (prevBooksPropRef.current === booksProp) return;
+
+    // Update ref
+    prevBooksPropRef.current = booksProp;
+
+    // Skip if not stopped or no books
+    if (spinState !== 'stopped' || books.length === 0) return;
+
+    // Re-spin to get a fresh book from the filtered set
+    doSpin();
+  }, [booksProp, spinState, books.length, doSpin]);
 
   const isInWishlist = selectedBookId ? userWishlist.includes(selectedBookId) : false;
   const showActions = spinState === 'stopped' && selectedIndex !== null;
-
-  if (books.length === 0) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.empty}>No books available</div>
-      </div>
-    );
-  }
+  const hasBooks = books.length > 0;
 
   const containerClasses = [styles.container, hasGoldenBorder && styles.goldenBorder]
     .filter(Boolean)
@@ -330,22 +341,26 @@ export function Carousel({
         {/* Dark overlay when stopped to dim background cards */}
         {showActions && <div className={styles.overlay} />}
 
-        <CarouselTrack
-          books={books}
-          angle={angle}
-          selectedIndex={selectedIndex}
-          spinning={spinState === 'spinning' || spinState === 'continuous' || spinState === 'nudging'}
-          userWishlist={userWishlist}
-          userVotes={userVotes}
-          seriesMap={seriesMap}
-          containerWidth={containerSize.width}
-          containerHeight={containerSize.height}
-          onCoverClick={onCoverClick}
-          onCardClick={handleCardClick}
-          onVote={onVote}
-          onSeriesBookClick={handleSeriesBookClick}
-          onGenreClick={onGenreClick}
-        />
+        {hasBooks ? (
+          <CarouselTrack
+            books={books}
+            angle={angle}
+            selectedIndex={selectedIndex}
+            spinning={spinState === 'spinning' || spinState === 'continuous' || spinState === 'nudging'}
+            userWishlist={userWishlist}
+            userVotes={userVotes}
+            seriesMap={seriesMap}
+            containerWidth={containerSize.width}
+            containerHeight={containerSize.height}
+            onCoverClick={onCoverClick}
+            onCardClick={handleCardClick}
+            onVote={onVote}
+            onSeriesBookClick={handleSeriesBookClick}
+            onGenreClick={onGenreClick}
+          />
+        ) : (
+          <div className={styles.empty}>No books available</div>
+        )}
       </div>
 
       {/* Floating action bar - appears when stopped */}

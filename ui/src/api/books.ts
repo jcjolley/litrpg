@@ -12,7 +12,6 @@ export interface BookFilters {
   author: CategoryFilters;
   narrator: CategoryFilters;
   length: CategoryFilters;
-  popularity: CategoryFilters;
   source: CategoryFilters;
   seriesPosition: CategoryFilters;
 }
@@ -23,7 +22,6 @@ export const EMPTY_FILTERS: BookFilters = {
   author: {},
   narrator: {},
   length: {},
-  popularity: {},
   source: {},
   seriesPosition: { first: 'include' },
 };

@@ -149,7 +149,6 @@ describe('useBooks', () => {
         author: {},
         narrator: {},
         length: {},
-        popularity: {},
         source: {},
         seriesPosition: { first: 'include' },
       });
@@ -185,7 +184,6 @@ describe('useBooks', () => {
         author: {},
         narrator: {},
         length: {},
-        popularity: {},
         source: {},
         seriesPosition: { first: 'include' },
       });

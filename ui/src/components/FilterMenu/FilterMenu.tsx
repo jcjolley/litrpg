@@ -56,11 +56,6 @@ const LENGTHS = [
   { value: 'Epic', label: 'EPIC' },
 ];
 
-const POPULARITY = [
-  { value: 'popular', label: 'POPULAR' },
-  { value: 'niche', label: 'HIDDEN GEMS' },
-];
-
 const SOURCES = [
   { value: 'AUDIBLE', label: 'AUDIOBOOKS' },
   { value: 'ROYAL_ROAD', label: 'WEB FICTION' },
@@ -79,7 +74,7 @@ interface FilterMenuProps {
   disabled?: boolean;
 }
 
-type FilterRow = 'source' | 'author' | 'narrator' | 'genre' | 'length' | 'popularity' | 'series' | 'discovery';
+type FilterRow = 'source' | 'author' | 'narrator' | 'genre' | 'length' | 'series' | 'discovery';
 
 // Cycle through filter states: neutral -> include -> exclude -> neutral
 function cycleFilterState(current: FilterState | undefined): FilterState | undefined {
@@ -311,7 +306,6 @@ export function FilterMenu({ filters, onFiltersChange, popularityWeight, onPopul
     addCategoryParts('narrator');
     addCategoryParts('genre');
     addCategoryParts('length');
-    addCategoryParts('popularity', { 'popular': 'POPULAR', 'niche': 'HIDDEN GEMS' });
 
     return parts.length > 0 ? parts.join(' • ') : 'No filters';
   };
@@ -397,13 +391,6 @@ export function FilterMenu({ filters, onFiltersChange, popularityWeight, onPopul
                 <span className={styles.categoryLabel}>LENGTH</span>
               </button>
               <button
-                className={`${styles.categoryRow} ${activeRow === 'popularity' ? styles.activeRow : ''} ${categoryHasFilters('popularity') ? styles.hasFilters : ''}`}
-                onClick={() => handleRowClick('popularity')}
-              >
-                <span className={styles.cursor}>{activeRow === 'popularity' ? '▶' : ' '}</span>
-                <span className={styles.categoryLabel}>POPULARITY</span>
-              </button>
-              <button
                 className={`${styles.categoryRow} ${activeRow === 'discovery' ? styles.activeRow : ''} ${popularityWeight !== 0 ? styles.hasFilters : ''}`}
                 onClick={() => handleRowClick('discovery')}
               >
@@ -482,11 +469,6 @@ export function FilterMenu({ filters, onFiltersChange, popularityWeight, onPopul
               {activeRow === 'length' && (
                 <div className={styles.optionsList}>
                   {LENGTHS.map(length => renderOption('length', length.value, length.label))}
-                </div>
-              )}
-              {activeRow === 'popularity' && (
-                <div className={styles.optionsList}>
-                  {POPULARITY.map(pop => renderOption('popularity', pop.value, pop.label))}
                 </div>
               )}
               {activeRow === 'discovery' && (

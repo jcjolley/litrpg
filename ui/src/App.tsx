@@ -36,7 +36,7 @@ export default function App() {
   const achievementEffects = useAchievementEffects(unlockedAchievements);
 
   // Data hooks
-  const { books, allBooks, seriesMap, loading, error, filters, setFilters } = useBooks();
+  const { books, allBooks, seriesMap, isReady, error, filters, setFilters } = useBooks();
   const { wishlist, addToWishlist, removeFromWishlist, count: wishlistCount } = useWishlist();
   const { notInterestedIds, addNotInterested, count: notInterestedCount } = useNotInterested();
   const { history, addToHistory, clearHistory } = useHistory();
@@ -418,7 +418,8 @@ export default function App() {
     }
   }, [pendingCompletionist, showAchievementNotification, consumeCompletionist]);
 
-  if (loading) {
+  // Only show loading screen if books aren't ready AND user has dismissed onboarding
+  if (!isReady && !showOnboarding) {
     return (
       <ThemeProvider unlockedAchievements={unlockedAchievements}>
         <div className="loading-container">
@@ -428,7 +429,8 @@ export default function App() {
     );
   }
 
-  if (error) {
+  // Only show error if books aren't ready AND user has dismissed onboarding
+  if (error && !isReady && !showOnboarding) {
     return (
       <ThemeProvider unlockedAchievements={unlockedAchievements}>
         <div className="error-container">
