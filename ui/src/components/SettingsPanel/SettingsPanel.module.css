@@ -3,7 +3,7 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 400;
+  z-index: 1100;
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -30,7 +30,7 @@
   box-shadow:
     inset -4px 0 0 0 var(--ff-border-inner),
     8px 0 32px rgba(0, 0, 0, 0.8);
-  z-index: 401;
+  z-index: 1101;
   animation: slideIn 0.3s ease-out;
 }
 
@@ -163,6 +163,25 @@
   font-size: 12px;
   color: var(--ff-text-muted);
   line-height: 1.5;
+}
+
+/* External link */
+.externalLink {
+  color: var(--ff-text-highlight);
+  text-decoration: underline;
+  transition: color 0.15s ease;
+}
+
+.externalLink:hover {
+  color: var(--ff-text-primary);
+}
+
+/* Disclaimer */
+.disclaimer {
+  font-size: 10px;
+  color: var(--ff-text-muted);
+  font-style: italic;
+  margin-top: var(--spacing-sm);
 }
 
 /* Mobile */

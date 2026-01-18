@@ -62,6 +62,26 @@ export function SettingsPanel({
             Disabling filters will show more books but may include ones you've already seen or completed.
           </div>
         </div>
+
+        {/* Recommendation Section */}
+        <div className={styles.section}>
+          <div className={styles.sectionHeader}>LOOKING FOR MORE?</div>
+          <div className={styles.infoText}>
+            Want more curated LitRPG recommendations? Check out{' '}
+            <a
+              href="https://ranknread.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.externalLink}
+            >
+              Rank N Read
+            </a>
+            —a community-driven site that generates recommendations based on user-provided tier lists.
+          </div>
+          <div className={styles.disclaimer}>
+            Not affiliated with any recommended sites.
+          </div>
+        </div>
       </div>
     </>
   );
