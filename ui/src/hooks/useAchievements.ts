@@ -136,6 +136,15 @@ export const ACHIEVEMENTS: Record<string, Achievement> = {
     effectType: 'visual',
     themeUnlock: 'princess-pink',
   },
+  voluntaryTribute: {
+    id: 'voluntaryTribute',
+    title: 'ACHIEVEMENT UNLOCKED!',
+    subtitle: 'Voluntary Tribute',
+    description: 'You have willingly offered tribute to the dungeon. The management appreciates your cooperation.',
+    effect: 'Royal Purple theme unlocked',
+    effectType: 'visual',
+    themeUnlock: 'royal-purple',
+  },
   completionist: {
     id: 'completionist',
     title: 'ACHIEVEMENT UNLOCKED!',

@@ -129,6 +129,27 @@
   --ff-action-neutral: #db7093;
 }
 
+/* Royal Purple - Unlocked by Voluntary Tribute */
+:root[data-theme="royal-purple"] {
+  --ff-blue-dark: #0d0618;
+  --ff-blue-mid: #1a0d30;
+  --ff-blue-light: #2d1a4e;
+
+  --ff-border-outer: #9b59b6;
+  --ff-border-inner: #7d3c98;
+  --ff-border-shadow: #0d0618;
+
+  --ff-text-primary: #f0e6ff;
+  --ff-text-secondary: #c9a0dc;
+  --ff-text-narrator: #d4a574;
+  --ff-text-highlight: #e1b530;
+  --ff-text-muted: #6a4d7a;
+
+  --ff-action-confirm: #9b59b6;
+  --ff-action-cancel: #c0392b;
+  --ff-action-neutral: #7d3c98;
+}
+
 /* Rainbow Shift - Unlocked by Completionist */
 :root[data-theme="rainbow-shift"] {
   --ff-blue-dark: #000020;

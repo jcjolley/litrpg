@@ -10,6 +10,7 @@ export const ALL_THEMES = [
   { id: 'forest-green', name: 'Forest Green', unlockedBy: 'explorer' },
   { id: 'crimson-red', name: 'Crimson Red', unlockedBy: 'speedReader' },
   { id: 'princess-pink', name: 'Princess Pink', unlockedBy: 'lydia' },
+  { id: 'royal-purple', name: 'Royal Purple', unlockedBy: 'voluntaryTribute' },
   { id: 'rainbow-shift', name: 'Rainbow Shift', unlockedBy: 'completionist' },
 ] as const;
 
@@ -67,9 +68,14 @@ export function ThemeProvider({ children, unlockedAchievements }: ThemeProviderP
     [isThemeUnlocked]
   );
 
-  // Apply theme to document root
+  // Apply theme to document root with view transition
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    const apply = () => document.documentElement.setAttribute('data-theme', theme);
+    if (document.startViewTransition) {
+      document.startViewTransition(apply);
+    } else {
+      apply();
+    }
   }, [theme]);
 
   // If current theme becomes locked (e.g., after remort), reset to default

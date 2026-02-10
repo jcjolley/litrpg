@@ -62,6 +62,9 @@ export default function App() {
   const [onboardingPhase, setOnboardingPhase] = useState<OnboardingPhase>('initial');
   const [currentAchievement, setCurrentAchievement] = useState<Achievement | null>(null);
 
+  // Badge state for new theme unlocks
+  const [hasNewTheme, setHasNewTheme] = useState(false);
+
   // Panel and dialog state
   const [showStatsPanel, setShowStatsPanel] = useState(false);
   const [showWishlistPanel, setShowWishlistPanel] = useState(false);
@@ -494,12 +497,31 @@ export default function App() {
           </button>
           <button
             className="stats-button"
-            onClick={() => setShowStatsPanel(true)}
+            onClick={() => {
+              setShowStatsPanel(true);
+              setHasNewTheme(false);
+            }}
             disabled={showOnboarding}
             type="button"
             title="Reader Stats"
+            style={{ position: 'relative' }}
           >
             <span role="img" aria-label="trophy">&#127942;</span>
+            {hasNewTheme && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -3,
+                  right: -3,
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  background: 'var(--ff-action-cancel)',
+                  border: '2px solid var(--ff-blue-dark)',
+                  animation: 'pulse 2s ease-in-out infinite',
+                }}
+              />
+            )}
           </button>
         </header>
 
@@ -602,6 +624,28 @@ export default function App() {
           onClose={() => setShowSettingsPanel(false)}
           settings={settings}
           onSettingsChange={updateSettings}
+          onSupportClick={() => {
+            const achievement = unlock('voluntaryTribute');
+            if (achievement) {
+              // Defer notification until user returns to this tab
+              const onReturn = () => {
+                if (!document.hidden) {
+                  document.removeEventListener('visibilitychange', onReturn);
+                  showAchievementNotification(achievement);
+                  // Auto-apply the Royal Purple theme
+                  localStorage.setItem('litrpg-theme', 'royal-purple');
+                  const apply = () => document.documentElement.setAttribute('data-theme', 'royal-purple');
+                  if (document.startViewTransition) {
+                    document.startViewTransition(apply);
+                  } else {
+                    apply();
+                  }
+                  setHasNewTheme(true);
+                }
+              };
+              document.addEventListener('visibilitychange', onReturn);
+            }
+          }}
         />
       </div>
     </ThemeProvider>

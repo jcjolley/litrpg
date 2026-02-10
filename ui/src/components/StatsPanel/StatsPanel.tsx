@@ -119,6 +119,23 @@ export function StatsPanel({
             <StatBar name="DEDICATION" value={statValues.dedication} label={`x${stats.totalSpins} spins`} />
           </div>
 
+          {/* Theme Selector */}
+          <div className={styles.section}>
+            <div className={styles.sectionHeader}>THEME</div>
+            <select
+              className={styles.themeSelect}
+              value={theme}
+              onChange={(e) => setTheme(e.target.value as ThemeId)}
+            >
+              {ALL_THEMES.map((t) => (
+                <option key={t.id} value={t.id} disabled={!isThemeUnlocked(t.id)}>
+                  {t.name}
+                  {!isThemeUnlocked(t.id) && ' (Locked)'}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Titles Section */}
           <div className={styles.section}>
             <div className={styles.sectionHeader}>
@@ -163,23 +180,6 @@ export function StatsPanel({
                   </div>
                 ))}
             </div>
-          </div>
-
-          {/* Theme Selector */}
-          <div className={styles.section}>
-            <div className={styles.sectionHeader}>THEME</div>
-            <select
-              className={styles.themeSelect}
-              value={theme}
-              onChange={(e) => setTheme(e.target.value as ThemeId)}
-            >
-              {ALL_THEMES.map((t) => (
-                <option key={t.id} value={t.id} disabled={!isThemeUnlocked(t.id)}>
-                  {t.name}
-                  {!isThemeUnlocked(t.id) && ' (Locked)'}
-                </option>
-              ))}
-            </select>
           </div>
 
           {/* Remort Button */}

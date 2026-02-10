@@ -6,6 +6,7 @@ interface SettingsPanelProps {
   onClose: () => void;
   settings: UserSettings;
   onSettingsChange: (updates: Partial<UserSettings>) => void;
+  onSupportClick?: () => void;
 }
 
 export function SettingsPanel({
@@ -13,6 +14,7 @@ export function SettingsPanel({
   onClose,
   settings,
   onSettingsChange,
+  onSupportClick,
 }: SettingsPanelProps) {
   if (!isOpen) return null;
 
@@ -93,6 +95,7 @@ export function SettingsPanel({
               target="_blank"
               rel="noopener noreferrer"
               className={styles.externalLink}
+              onClick={onSupportClick}
             >
               Buy me a potion on Patreon
             </a>
@@ -104,6 +107,7 @@ export function SettingsPanel({
               target="_blank"
               rel="noopener noreferrer"
               className={styles.externalLink}
+              onClick={onSupportClick}
             >
               Try Audible free
             </a>
