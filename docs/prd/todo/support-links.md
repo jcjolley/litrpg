@@ -9,8 +9,8 @@
 - [x] Quality Gates
 - [x] Code Review
 - [x] Smoke Testing
-- [ ] Commit
-- [ ] Deploy
+- [x] Commit
+- [x] Deploy
 - [ ] Retrospective
 
 ## Overview
