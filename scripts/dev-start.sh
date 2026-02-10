@@ -12,8 +12,8 @@ echo "=== Starting LitRPG Development Environment ==="
 # 1. Start LocalStack
 echo ""
 echo "[1/5] Starting LocalStack..."
-docker compose up -d
-sleep 3
+podman run --rm -d --name litrpg-localstack -p 4566:4566 docker.io/localstack/localstack:latest 2>/dev/null || echo "LocalStack container already running"
+sleep 5
 
 # Wait for LocalStack to be ready
 echo "Waiting for LocalStack to be ready..."
@@ -67,11 +67,9 @@ else
   echo "Using sample data (data/sample-books.json)..."
   DATA_FILE="$PROJECT_ROOT/data/sample-books.json"
 fi
-# Convert Git Bash /c/ paths to C:/ format for Gradle/Java compatibility
-DATA_FILE_WIN=$(echo "$DATA_FILE" | sed 's|^/\([a-z]\)/|\U\1:/|')
 # Disable set -e for gradlew (its internal scripts may return non-zero for valid conditions)
 set +e
-./gradlew :curator:run --args="import $DATA_FILE_WIN --dynamo http://localhost:4566"
+./gradlew :curator:run --args="import $DATA_FILE --dynamo http://localhost:4566"
 IMPORT_STATUS=$?
 set -e
 if [ $IMPORT_STATUS -ne 0 ]; then
@@ -107,7 +105,7 @@ echo ""
 echo "Press Ctrl+C to stop all services"
 
 # Handle shutdown
-trap "echo 'Shutting down...'; kill $QUARKUS_PID $UI_PID 2>/dev/null; docker compose down" EXIT
+trap "echo 'Shutting down...'; kill $QUARKUS_PID $UI_PID 2>/dev/null; podman stop litrpg-localstack 2>/dev/null" EXIT
 
 # Wait for processes
 wait

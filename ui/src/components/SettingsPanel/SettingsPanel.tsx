@@ -82,6 +82,36 @@ export function SettingsPanel({
             Not affiliated with any recommended sites.
           </div>
         </div>
+
+        {/* Support Section */}
+        <div className={styles.section}>
+          <div className={styles.sectionHeader}>SUPPORT THE GUILD</div>
+          <div className={styles.infoText}>
+            Want to keep the tavern lights on?{' '}
+            <a
+              href="https://patreon.com/jcjolley"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.externalLink}
+            >
+              Buy me a potion on Patreon
+            </a>
+          </div>
+          <div className={styles.infoText}>
+            New to audiobooks?{' '}
+            <a
+              href="https://www.amazon.com/hz/audible/mlp/membership/premiumplus?tag=jolleyboy-20"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.externalLink}
+            >
+              Try Audible free
+            </a>
+          </div>
+          <div className={styles.disclaimer}>
+            Affiliate link: Audible trial signups may earn the guild a bounty.
+          </div>
+        </div>
       </div>
     </>
   );
