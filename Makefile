@@ -117,6 +117,8 @@ list-local:
 # Quick add/update a book from Audible or Royal Road URL
 # Usage: make add URL=https://www.audible.com/pd/Book-Title/B0XXXXXXXX
 #        make add URL=https://www.royalroad.com/fiction/12345/title
+#        make add URL=... MODEL=glm-4.7-flash
+MODEL ?= llama3.2:latest
 add: aws-login
 	@if [ -z "$(URL)" ]; then \
 		echo "Usage: make add URL=<audible-url>"; \
@@ -124,7 +126,7 @@ add: aws-login
 	fi
 	eval "$$(aws configure export-credentials --format env)" && \
 		AWS_REGION=us-west-2 \
-		./gradlew :curator:run --args="add -y $(URL)"
+		./gradlew :curator:run --args="add -y --model $(MODEL) $(URL)"
 
 # Export books from production DynamoDB to local file
 export-prod: aws-login
